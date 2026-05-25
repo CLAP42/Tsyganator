@@ -1,0 +1,105 @@
+# =============================================================================
+#  Tsyganator — Windows VST3 build
+# =============================================================================
+#  Builds the plugin on a Windows runner (Visual Studio 2022) and uploads the
+#  resulting .vst3 as a downloadable artifact.
+#
+#  Triggers:
+#    - Every push to `main` (sanity check)
+#    - Every git tag starting with `v` (e.g. v1.0.0, v1.1.0) → release build
+#    - Manually via the "Run workflow" button in the Actions tab
+#
+#  Output:
+#    The .vst3 (Windows bundle) is zipped and attached to the workflow run.
+#    Download it from the Actions tab → click the run → "Artifacts" section.
+# =============================================================================
+
+name: Build Windows VST3
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:   # allow manual triggering
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout the repo
+      # -----------------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Cache JUCE FetchContent
+      #    JUCE is ~150 MB. First build pulls it from GitHub (~2 min).
+      #    Subsequent builds restore from cache (~10 s). Cache key includes
+      #    the JUCE git tag in CMakeLists so bumping JUCE invalidates it.
+      # -----------------------------------------------------------------------
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps/juce-src
+          key: juce-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+
+      # -----------------------------------------------------------------------
+      # 3. Configure CMake
+      #    -G "Visual Studio 17 2022" → use MSBuild + MSVC v143
+      #    -A x64                      → 64-bit Windows
+      #    -DCMAKE_BUILD_TYPE=Release  → optimized build (ignored by VS but
+      #                                  good practice for multi-config gens)
+      # -----------------------------------------------------------------------
+      - name: Configure
+        run: |
+          cmake -S . -B build `
+            -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=Release
+
+      # -----------------------------------------------------------------------
+      # 4. Build (Release config, parallel)
+      # -----------------------------------------------------------------------
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      # -----------------------------------------------------------------------
+      # 5. Sanity check — confirm the .vst3 bundle exists
+      # -----------------------------------------------------------------------
+      - name: Verify artifact
+        shell: pwsh
+        run: |
+          $vst3 = "build/Tsyganator_artefacts/Release/VST3/Tsyganator.vst3"
+          if (-Not (Test-Path $vst3)) {
+            Write-Error "VST3 not found at $vst3"
+            exit 1
+          }
+          Write-Host "VST3 bundle found:"
+          Get-ChildItem -Recurse $vst3 | Select-Object FullName, Length
+
+      # -----------------------------------------------------------------------
+      # 6. Upload artifact
+      #    On Windows the .vst3 is a *folder* bundle (Contents/x86_64-win/...).
+      #    actions/upload-artifact zips it automatically — the user downloads
+      #    `Tsyganator-windows-vst3.zip` and extracts to keep the folder shape.
+      # -----------------------------------------------------------------------
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tsyganator-windows-vst3
+          path: build/Tsyganator_artefacts/Release/VST3/Tsyganator.vst3
+          if-no-files-found: error
+          retention-days: 30
+
+      # -----------------------------------------------------------------------
+      # 7. Upload Standalone .exe (handy for testers without a DAW)
+      # -----------------------------------------------------------------------
+      - name: Upload Standalone
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tsyganator-windows-standalone
+          path: build/Tsyganator_artefacts/Release/Standalone/Tsyganator.exe
+          if-no-files-found: warn
+          retention-days: 30

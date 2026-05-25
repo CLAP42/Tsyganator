@@ -1,0 +1,107 @@
+# ============================================================
+#  Tsyganator — .gitignore
+# ============================================================
+#  Tout ce qui suit ne sera PAS versionné sur GitHub.
+#  Le code source, les assets, les docs et les configs CMake
+#  sont versionnés. Le build/ et les artefacts ne le sont pas
+#  (ils sont régénérés à chaque compilation).
+# ============================================================
+
+# ---- Build artefacts (régénérés par CMake) ----
+build/
+build-*/
+out/
+cmake-build-*/
+
+# ---- Distribution binaries (à attacher à une GitHub Release, pas à committer) ----
+# Garder le code source seulement. Les .vst3/.app/.component sont régénérés
+# à chaque build. Pour publier une version officielle, utiliser:
+#   GitHub → Releases → Draft new release → drag & drop le zip
+distribution/
+
+# ---- Marketing assets (source files, story drafts, contact sheets) ----
+# Trop lourds (34M) et pas nécessaires pour builder le plugin.
+# Les fichiers RESTENT sur ton disque local — git arrête juste de les suivre.
+# Les versions finales embarquées (logo, mascot) sont dans Resources/.
+marketing/
+
+# ---- macOS ----
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# ---- Xcode ----
+*.xcodeproj/
+*.xcworkspace/
+*.xcuserdata*
+xcuserdata/
+DerivedData/
+*.moved-aside
+
+# ---- Visual Studio / Windows ----
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vcxproj.filters
+.vs/
+[Dd]ebug/
+[Rr]elease/
+[Xx]64/
+[Xx]86/
+[Ww][Ii][Nn]32/
+ipch/
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.opendb
+
+# ---- JetBrains / CLion ----
+.idea/
+cmake-build-*/
+
+# ---- VSCode (garde les configs partagées, ignore le perso) ----
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ---- Compiled binaries ----
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+*.component
+*.vst
+*.vst3
+
+# ---- Logs / temp ----
+*.log
+*.tmp
+*.swp
+*~
+.cache/
+
+# ---- Local secrets (au cas où) ----
+.env
+.env.local
+*.local
+
+# ---- Python (si jamais on a des scripts de build) ----
+__pycache__/
+*.pyc
+.venv/
+venv/
