@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Brouillard d'Anvers" version="1.0" factory="1">
+  <SynthParams sawLevel="0.5" pulseLevel="0.0" subLevel="0.0" pulseWidth="0.5"
+               cutoff="1200.0" resonance="0.1500000059604645" filterEnvAmount="0.1000000014901161"
+               filterAttack="1.200000047683716" filterDecay="1.0" filterSustain="0.5"
+               filterRelease="2.5" ampAttack="0.800000011920929" ampDecay="0.6000000238418579"
+               ampSustain="0.75" ampRelease="3.0" noiseLevel="0.0" osc2Saw="0.5"
+               osc2Pulse="0.0" osc2PW="0.5" osc2Octave="0" osc2Fine="8.0" chorusMode="3"
+               masterGain="0.5" lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0"
+               lfoDestination="0" unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

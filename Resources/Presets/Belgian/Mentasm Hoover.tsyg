@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Mentasm Hoover" version="1.0" factory="1">
+  <SynthParams sawLevel="0.8999999761581421" pulseLevel="0.0" subLevel="0.4000000059604645"
+               pulseWidth="0.5" cutoff="1500.0" resonance="0.4000000059604645"
+               filterEnvAmount="0.300000011920929" filterAttack="0.001000000047497451"
+               filterDecay="0.4000000059604645" filterSustain="0.300000011920929"
+               filterRelease="0.2000000029802322" ampAttack="0.001000000047497451"
+               ampDecay="0.5" ampSustain="0.699999988079071" ampRelease="0.300000011920929"
+               noiseLevel="0.0" osc2Saw="0.8999999761581421" osc2Pulse="0.0"
+               osc2PW="0.5" osc2Octave="0" osc2Fine="25.0" chorusMode="0" masterGain="0.8500000238418579"
+               lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0" lfoDestination="0"
+               unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

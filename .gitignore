@@ -13,11 +13,11 @@ build-*/
 out/
 cmake-build-*/
 
-# ---- Distribution binaries (à attacher à une GitHub Release, pas à committer) ----
-# Garder le code source seulement. Les .vst3/.app/.component sont régénérés
-# à chaque build. Pour publier une version officielle, utiliser:
-#   GitHub → Releases → Draft new release → drag & drop le zip
-distribution/
+# ---- Builds packagés (VERSIONNÉS, rangés par OS dans builds/) ----
+# On versionne volontairement builds/macOS/ et builds/Windows/ pour que le
+# repo contienne les deux distributables (zips + plugins). Les règles
+# d'extension plus bas (*.vst3, *.exe, *.app...) sont ré-incluses pour builds/
+# tout en bas de ce fichier. Le cache de compilation CMake (build/) reste ignoré.
 
 # ---- Marketing assets (source files, story drafts, contact sheets) ----
 # Trop lourds (34M) et pas nécessaires pour builder le plugin.
@@ -105,3 +105,13 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# ============================================================
+#  Ré-inclusion des builds packagés (DOIT rester en fin de fichier,
+#  après les règles *.vst3 / *.exe / *.app / *.dll / *.zip ci-dessus)
+# ============================================================
+!builds/
+!builds/**
+# ...mais on garde les déchets macOS hors de builds/
+builds/**/.DS_Store
+builds/**/._*

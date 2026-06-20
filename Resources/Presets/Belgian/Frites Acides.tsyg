@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Frites Acides" version="1.0" factory="1">
+  <SynthParams sawLevel="0.8999999761581421" pulseLevel="0.0" subLevel="0.0"
+               pulseWidth="0.5" cutoff="400.0" resonance="0.75" filterEnvAmount="0.8999999761581421"
+               filterAttack="0.001000000047497451" filterDecay="0.1500000059604645"
+               filterSustain="0.01999999955296516" filterRelease="0.05000000074505806"
+               ampAttack="0.001000000047497451" ampDecay="0.2000000029802322"
+               ampSustain="0.0" ampRelease="0.03999999910593033" noiseLevel="0.0"
+               osc2Saw="0.0" osc2Pulse="0.0" osc2PW="0.5" osc2Octave="0" osc2Fine="0.0"
+               chorusMode="0" masterGain="0.8999999761581421" lfoRate="1.0"
+               lfoDepth="0.0" lfoWaveform="0" lfoDestination="0" unisonDetune="15.0"
+               keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

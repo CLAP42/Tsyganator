@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Tramonto Romantico" version="1.0" factory="1">
+  <SynthParams sawLevel="0.800000011920929" pulseLevel="0.0" subLevel="0.0"
+               pulseWidth="0.5" cutoff="3200.0" resonance="0.0" filterEnvAmount="0.1000000014901161"
+               filterAttack="0.5" filterDecay="0.5" filterSustain="0.699999988079071"
+               filterRelease="1.200000047683716" ampAttack="0.300000011920929"
+               ampDecay="0.300000011920929" ampSustain="0.8999999761581421"
+               ampRelease="1.799999952316284" noiseLevel="0.0" osc2Saw="0.699999988079071"
+               osc2Pulse="0.0" osc2PW="0.5" osc2Octave="0" osc2Fine="12.0" chorusMode="3"
+               masterGain="0.550000011920929" lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0"
+               lfoDestination="0" unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

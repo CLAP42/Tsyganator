@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Colosseo Strings" version="1.0" factory="1">
+  <SynthParams sawLevel="0.4000000059604645" pulseLevel="0.0" subLevel="0.0"
+               pulseWidth="0.5" cutoff="3000.0" resonance="0.05000000074505806"
+               filterEnvAmount="0.1500000059604645" filterAttack="0.300000011920929"
+               filterDecay="0.300000011920929" filterSustain="0.699999988079071"
+               filterRelease="0.4000000059604645" ampAttack="0.2000000029802322"
+               ampDecay="0.1500000059604645" ampSustain="0.8999999761581421"
+               ampRelease="0.6000000238418579" noiseLevel="0.0" osc2Saw="0.4000000059604645"
+               osc2Pulse="0.0" osc2PW="0.5" osc2Octave="1" osc2Fine="6.0" chorusMode="3"
+               masterGain="0.6000000238418579" lfoRate="1.0" lfoDepth="0.0"
+               lfoWaveform="0" lfoDestination="0" unisonDetune="15.0" keyTracking="0.0"
+               portamento="0.0"/>
+</TsyganatorPreset>

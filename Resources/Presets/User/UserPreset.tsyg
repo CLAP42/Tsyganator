@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="UserPreset" version="1.0">
+  <Parameters>
+    <PARAMETERS>
+      <PARAM id="ampAttack" value="0.001000000047497451"/>
+      <PARAM id="ampDecay" value="0.25"/>
+      <PARAM id="ampRelease" value="0.07999999821186066"/>
+      <PARAM id="ampSustain" value="0.05999999865889549"/>
+      <PARAM id="arpGateLength" value="0.4999999701976776"/>
+      <PARAM id="arpOctaveRange" value="0.0"/>
+      <PARAM id="arpRate" value="3.0"/>
+      <PARAM id="chorusMode" value="1"/>
+      <PARAM id="cutoff" value="2200.0"/>
+      <PARAM id="filterAttack" value="0.001000000047497451"/>
+      <PARAM id="filterDecay" value="0.2199999988079071"/>
+      <PARAM id="filterEnvAmount" value="0.449999988079071"/>
+      <PARAM id="filterRelease" value="0.1000000014901161"/>
+      <PARAM id="filterSustain" value="0.119999997317791"/>
+      <PARAM id="globalFineTune" value="0.0"/>
+      <PARAM id="keyTracking" value="0.0"/>
+      <PARAM id="lfoDepth" value="0.0"/>
+      <PARAM id="lfoDestination" value="0"/>
+      <PARAM id="lfoRate" value="1.0"/>
+      <PARAM id="lfoSync" value="0.0"/>
+      <PARAM id="lfoSyncRate" value="5.0"/>
+      <PARAM id="lfoWaveform" value="0"/>
+      <PARAM id="lofiAmount" value="0.300000011920929"/>
+      <PARAM id="lofiMode" value="0"/>
+      <PARAM id="masterGain" value="0.699999988079071"/>
+      <PARAM id="noiseLevel" value="0.0"/>
+      <PARAM id="osc1Volume" value="1.0"/>
+      <PARAM id="osc2Fine" value="0.0"/>
+      <PARAM id="osc2Octave" value="2"/>
+      <PARAM id="osc2PW" value="0.5"/>
+      <PARAM id="osc2Pulse" value="0.0"/>
+      <PARAM id="osc2Saw" value="0.0"/>
+      <PARAM id="osc2Triangle" value="0.0"/>
+      <PARAM id="osc2Volume" value="1.0"/>
+      <PARAM id="portamento" value="0.0"/>
+      <PARAM id="pulseLevel" value="0.8999999761581421"/>
+      <PARAM id="pulseWidth" value="0.5"/>
+      <PARAM id="resonance" value="0.1000000014901161"/>
+      <PARAM id="sawLevel" value="0.0"/>
+      <PARAM id="seqGateLength" value="0.4999999701976776"/>
+      <PARAM id="seqNumSteps" value="16.0"/>
+      <PARAM id="seqRate" value="4.0"/>
+      <PARAM id="seqSwing" value="0.0"/>
+      <PARAM id="stereoSpread" value="0.0"/>
+      <PARAM id="subLevel" value="0.5"/>
+      <PARAM id="synthMode" value="1.0"/>
+      <PARAM id="triangleLevel" value="0.0"/>
+      <PARAM id="unisonDetune" value="15.0"/>
+      <PARAM id="unisonMode" value="1"/>
+      <PARAM id="velocityCurve" value="0.3999999761581421"/>
+    </PARAMETERS>
+  </Parameters>
+  <Sequencer numSteps="16" swing="0.0" gateLength="0.4999999701976776">
+    <Step index="0" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="1" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="2" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="3" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="4" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="5" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="6" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="7" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="8" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="9" note="60" velocity="0.800000011920929" active="0" glide="0"
+          accent="0"/>
+    <Step index="10" note="60" velocity="0.800000011920929" active="0"
+          glide="0" accent="0"/>
+    <Step index="11" note="60" velocity="0.800000011920929" active="0"
+          glide="0" accent="0"/>
+    <Step index="12" note="60" velocity="0.800000011920929" active="0"
+          glide="0" accent="0"/>
+    <Step index="13" note="60" velocity="0.800000011920929" active="0"
+          glide="0" accent="0"/>
+    <Step index="14" note="60" velocity="0.800000011920929" active="0"
+          glide="0" accent="0"/>
+    <Step index="15" note="60" velocity="0.800000011920929" active="0"
+          glide="0" accent="0"/>
+  </Sequencer>
+</TsyganatorPreset>

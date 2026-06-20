@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Mama Mia Brass" version="1.0" factory="1">
+  <SynthParams sawLevel="0.699999988079071" pulseLevel="0.699999988079071" subLevel="0.0"
+               pulseWidth="0.5" cutoff="3500.0" resonance="0.1000000014901161"
+               filterEnvAmount="0.800000011920929" filterAttack="0.00800000037997961"
+               filterDecay="0.119999997317791" filterSustain="0.5" filterRelease="0.1500000059604645"
+               ampAttack="0.00800000037997961" ampDecay="0.05999999865889549"
+               ampSustain="0.800000011920929" ampRelease="0.1500000059604645"
+               noiseLevel="0.0" osc2Saw="0.6000000238418579" osc2Pulse="0.5"
+               osc2PW="0.5" osc2Octave="0" osc2Fine="10.0" chorusMode="1" masterGain="0.75"
+               lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0" lfoDestination="0"
+               unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

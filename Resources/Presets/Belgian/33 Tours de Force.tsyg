@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="33 Tours de Force" version="1.0" factory="1">
+  <SynthParams sawLevel="0.6000000238418579" pulseLevel="0.0" subLevel="0.699999988079071"
+               pulseWidth="0.5" cutoff="280.0" resonance="0.5" filterEnvAmount="0.4000000059604645"
+               filterAttack="0.001000000047497451" filterDecay="0.6000000238418579"
+               filterSustain="0.1500000059604645" filterRelease="0.2000000029802322"
+               ampAttack="0.001000000047497451" ampDecay="0.800000011920929"
+               ampSustain="0.0" ampRelease="0.1500000059604645" noiseLevel="0.0"
+               osc2Saw="0.5" osc2Pulse="0.0" osc2PW="0.5" osc2Octave="0" osc2Fine="7.0"
+               chorusMode="0" masterGain="0.949999988079071" lfoRate="1.0" lfoDepth="0.0"
+               lfoWaveform="0" lfoDestination="0" unisonDetune="15.0" keyTracking="0.0"
+               portamento="0.0"/>
+</TsyganatorPreset>

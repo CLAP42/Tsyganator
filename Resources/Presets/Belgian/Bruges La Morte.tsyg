@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Bruges La Morte" version="1.0" factory="1">
+  <SynthParams sawLevel="0.0" pulseLevel="1.0" subLevel="0.0" pulseWidth="0.6000000238418579"
+               cutoff="2000.0" resonance="0.5" filterEnvAmount="0.5" filterAttack="0.009999999776482582"
+               filterDecay="0.300000011920929" filterSustain="0.3499999940395355"
+               filterRelease="0.4000000059604645" ampAttack="0.009999999776482582"
+               ampDecay="0.1500000059604645" ampSustain="0.800000011920929"
+               ampRelease="0.5" noiseLevel="0.0" osc2Saw="0.0" osc2Pulse="0.800000011920929"
+               osc2PW="0.4000000059604645" osc2Octave="0" osc2Fine="-12.0" chorusMode="2"
+               masterGain="0.699999988079071" lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0"
+               lfoDestination="0" unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

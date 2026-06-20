@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Stomp des Ardennes" version="1.0" factory="1">
+  <SynthParams sawLevel="0.0" pulseLevel="0.6000000238418579" subLevel="0.0"
+               pulseWidth="0.1500000059604645" cutoff="900.0" resonance="0.550000011920929"
+               filterEnvAmount="0.800000011920929" filterAttack="0.001000000047497451"
+               filterDecay="0.07999999821186066" filterSustain="0.0" filterRelease="0.03999999910593033"
+               ampAttack="0.001000000047497451" ampDecay="0.05000000074505806"
+               ampSustain="0.0" ampRelease="0.02999999932944775" noiseLevel="0.5"
+               osc2Saw="0.0" osc2Pulse="0.4000000059604645" osc2PW="0.5" osc2Octave="-1"
+               osc2Fine="0.0" chorusMode="0" masterGain="0.8999999761581421"
+               lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0" lfoDestination="0"
+               unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

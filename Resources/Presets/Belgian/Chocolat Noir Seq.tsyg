@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Chocolat Noir Seq" version="1.0" factory="1">
+  <SynthParams sawLevel="0.800000011920929" pulseLevel="0.0" subLevel="0.300000011920929"
+               pulseWidth="0.5" cutoff="800.0" resonance="0.1500000059604645"
+               filterEnvAmount="0.6499999761581421" filterAttack="0.001000000047497451"
+               filterDecay="0.1800000071525574" filterSustain="0.07999999821186066"
+               filterRelease="0.1000000014901161" ampAttack="0.001000000047497451"
+               ampDecay="0.119999997317791" ampSustain="0.0" ampRelease="0.05999999865889549"
+               noiseLevel="0.0" osc2Saw="0.0" osc2Pulse="0.0" osc2PW="0.5" osc2Octave="0"
+               osc2Fine="0.0" chorusMode="0" masterGain="0.8500000238418579"
+               lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0" lfoDestination="0"
+               unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

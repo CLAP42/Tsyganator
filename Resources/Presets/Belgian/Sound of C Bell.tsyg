@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Sound of C Bell" version="1.0" factory="1">
+  <SynthParams sawLevel="0.0" pulseLevel="0.800000011920929" subLevel="0.0"
+               pulseWidth="0.5" cutoff="8000.0" resonance="0.1000000014901161"
+               filterEnvAmount="0.4000000059604645" filterAttack="0.001000000047497451"
+               filterDecay="0.5" filterSustain="0.0" filterRelease="0.300000011920929"
+               ampAttack="0.001000000047497451" ampDecay="0.800000011920929"
+               ampSustain="0.0" ampRelease="0.5" noiseLevel="0.0" osc2Saw="0.0"
+               osc2Pulse="0.6000000238418579" osc2PW="0.300000011920929" osc2Octave="2"
+               osc2Fine="5.0" chorusMode="1" masterGain="0.6000000238418579"
+               lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0" lfoDestination="0"
+               unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

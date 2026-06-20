@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Nebbia di Milano" version="1.0" factory="1">
+  <SynthParams sawLevel="0.0" pulseLevel="0.6000000238418579" subLevel="0.0"
+               pulseWidth="0.6000000238418579" cutoff="1500.0" resonance="0.25"
+               filterEnvAmount="0.1500000059604645" filterAttack="1.0" filterDecay="0.800000011920929"
+               filterSustain="0.5" filterRelease="2.5" ampAttack="0.800000011920929"
+               ampDecay="0.6000000238418579" ampSustain="0.699999988079071"
+               ampRelease="3.0" noiseLevel="0.1500000059604645" osc2Saw="0.0"
+               osc2Pulse="0.5" osc2PW="0.4000000059604645" osc2Octave="0" osc2Fine="-15.0"
+               chorusMode="2" masterGain="0.449999988079071" lfoRate="1.0" lfoDepth="0.0"
+               lfoWaveform="0" lfoDestination="0" unisonDetune="15.0" keyTracking="0.0"
+               portamento="0.0"/>
+</TsyganatorPreset>

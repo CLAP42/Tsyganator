@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Pasta al Basso" version="1.0" factory="1">
+  <SynthParams sawLevel="0.0" pulseLevel="0.8999999761581421" subLevel="0.5"
+               pulseWidth="0.5" cutoff="1200.0" resonance="0.2000000029802322"
+               filterEnvAmount="0.5" filterAttack="0.001000000047497451" filterDecay="0.2000000029802322"
+               filterSustain="0.1500000059604645" filterRelease="0.1000000014901161"
+               ampAttack="0.001000000047497451" ampDecay="0.1500000059604645"
+               ampSustain="0.0" ampRelease="0.07999999821186066" noiseLevel="0.0"
+               osc2Saw="0.0" osc2Pulse="0.0" osc2PW="0.5" osc2Octave="0" osc2Fine="0.0"
+               chorusMode="1" masterGain="0.8500000238418579" lfoRate="1.0"
+               lfoDepth="0.0" lfoWaveform="0" lfoDestination="0" unisonDetune="15.0"
+               keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

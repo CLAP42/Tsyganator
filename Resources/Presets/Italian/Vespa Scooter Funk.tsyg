@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Vespa Scooter Funk" version="1.0" factory="1">
+  <SynthParams sawLevel="0.0" pulseLevel="1.0" subLevel="0.300000011920929"
+               pulseWidth="0.1500000059604645" cutoff="1800.0" resonance="0.3499999940395355"
+               filterEnvAmount="0.6000000238418579" filterAttack="0.001000000047497451"
+               filterDecay="0.07999999821186066" filterSustain="0.05000000074505806"
+               filterRelease="0.05000000074505806" ampAttack="0.001000000047497451"
+               ampDecay="0.05999999865889549" ampSustain="0.0" ampRelease="0.03999999910593033"
+               noiseLevel="0.0" osc2Saw="0.300000011920929" osc2Pulse="0.0"
+               osc2PW="0.5" osc2Octave="0" osc2Fine="5.0" chorusMode="0" masterGain="0.8500000238418579"
+               lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0" lfoDestination="0"
+               unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>

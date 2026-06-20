@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TsyganatorPreset name="Koto Visitors" version="1.0" factory="1">
+  <SynthParams sawLevel="0.5" pulseLevel="0.5" subLevel="0.0" pulseWidth="0.5"
+               cutoff="7000.0" resonance="0.119999997317791" filterEnvAmount="0.5"
+               filterAttack="0.001000000047497451" filterDecay="0.1000000014901161"
+               filterSustain="0.1000000014901161" filterRelease="0.05999999865889549"
+               ampAttack="0.001000000047497451" ampDecay="0.05999999865889549"
+               ampSustain="0.4000000059604645" ampRelease="0.1000000014901161"
+               noiseLevel="0.0" osc2Saw="0.4000000059604645" osc2Pulse="0.4000000059604645"
+               osc2PW="0.5" osc2Octave="1" osc2Fine="0.0" chorusMode="3" masterGain="0.6499999761581421"
+               lfoRate="1.0" lfoDepth="0.0" lfoWaveform="0" lfoDestination="0"
+               unisonDetune="15.0" keyTracking="0.0" portamento="0.0"/>
+</TsyganatorPreset>
