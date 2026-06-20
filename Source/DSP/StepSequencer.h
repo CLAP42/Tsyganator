@@ -238,7 +238,10 @@ public:
             // Calculate which step we're on from PPQ using rate division
             double stepsFromPPQ = ppqPosition / rateDivBeats[rateDiv];
             int numStepsVal = numSteps.load(std::memory_order_acquire);
-            int newStep = ((int)stepsFromPPQ) % numStepsVal;
+            // Positive modulo: host pre-roll/count-in gives negative PPQ, and
+            // C++ % of a negative yields a negative index → out-of-bounds.
+            int rawStep = (int)std::floor(stepsFromPPQ);
+            int newStep = ((rawStep % numStepsVal) + numStepsVal) % numStepsVal;
             currentStep.store(newStep, std::memory_order_release);
             sampleCounter = 0;
             triggerCurrentStep();
@@ -266,7 +269,9 @@ public:
 
         double stepsFromPPQ = ppqPosition / beatsPerStep;
         int numStepsVal = numSteps.load(std::memory_order_acquire);
-        int expectedStep = ((int)std::floor(stepsFromPPQ)) % numStepsVal;
+        // Positive modulo guards against negative PPQ (host pre-roll/count-in).
+        int rawStep = (int)std::floor(stepsFromPPQ);
+        int expectedStep = ((rawStep % numStepsVal) + numStepsVal) % numStepsVal;
 
         // How far into the current step (in samples)
         double fractional = stepsFromPPQ - std::floor(stepsFromPPQ);
@@ -620,6 +625,9 @@ private:
     void triggerCurrentStep()
     {
         int cur = currentStep.load(std::memory_order_acquire);
+        // Safety net: never index the steps array out of bounds, even if a
+        // desync slipped a bad value through (host pre-roll, race, etc.).
+        if (cur < 0 || cur >= MAX_STEPS) return;
         // Snapshot the step in one go — atomic fields, loaded once each
         const bool  stepActive   = steps[cur].active.load(std::memory_order_acquire);
         const int   stepNote     = steps[cur].note.load(std::memory_order_acquire);

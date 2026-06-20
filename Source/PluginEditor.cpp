@@ -741,6 +741,7 @@ juce::Typeface::Ptr TsyganatorLookAndFeel::getTypefaceForFont(const juce::Font& 
 static juce::String midiNoteName(int note)
 {
     static const char* names[] = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+    note = juce::jlimit(0, 127, note);   // guard: negative note → negative index → OOB read
     int oct = (note / 12) - 1;
     return juce::String(names[note % 12]) + juce::String(oct);
 }
@@ -1274,6 +1275,9 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     seqNumStepsLabel.setJustificationType(juce::Justification::centred);
     seqNumStepsLabel.setFont(juce::Font(juce::FontOptions("JetBrains Mono", 14.0f, juce::Font::bold)));
     styleLabel(seqNumStepsLabel);
+    // Render to an offscreen image so the digits aren't corrupted by the
+    // partial repaints the 67 Hz timer issues around it (macOS glyph-cache bug).
+    seqNumStepsLabel.setBufferedToImage(true);
     addAndMakeVisible(seqNumStepsLabel);
 
     stepPlusButton.setButtonText("+");
@@ -2985,6 +2989,8 @@ void TsyganatorEditor::draw3DDiscoBall(juce::Graphics& g, float cx, float cy, fl
         float x[4], y[4];
         float depth;
         juce::Colour col;
+        float spec;        // glint strength for the sparkle pass
+        float fcx, fcy;    // 2D face centre (sparkle position)
     };
     std::vector<Face> faces;
     faces.reserve(latSteps * lonSteps);
@@ -3029,25 +3035,40 @@ void TsyganatorEditor::draw3DDiscoBall(juce::Graphics& g, float cx, float cy, fl
             // Diffuse lighting
             float diff = juce::jmax(0.0f, ncx * lx + ncy * ly + ncz * lz);
 
-            // Specular (power 8, multiplier 1.4)
+            // Sharper specular (power 12) → tighter, brighter mirror glints
             float reflZ = 2.0f * ncz * (ncx * lx + ncy * ly + ncz * lz) - lz;
-            float spec = std::pow(juce::jmax(0.0f, reflZ), 8.0f) * 1.4f;
+            float spec = std::pow(juce::jmax(0.0f, reflZ), 12.0f) * 1.8f;
 
-            // Base color: grey with pink tint
-            float base = 70.0f + diff * 160.0f;
-            int r_ch = juce::jlimit(0, 255, (int)(base + spec * 255.0f));
-            int g_ch = juce::jlimit(0, 255, (int)(base * 0.92f + spec * 200.0f));
-            int b_ch = juce::jlimit(0, 255, (int)(base * 0.95f + spec * 220.0f));
+            // Per-tile deterministic hash → each mirror facet reads slightly
+            // differently (real disco balls aren't a uniform grey sphere).
+            float hsh = std::sin(la * 12.9898f + lo * 78.233f) * 43758.5453f;
+            hsh = hsh - std::floor(hsh);                  // [0,1)
+            float tileVar = 0.78f + 0.44f * hsh;          // brightness scatter
+
+            // Subtle disco multicolour: a few tiles lean warm/cool/gold.
+            float tr = 1.0f, tg = 0.94f, tb = 1.0f;
+            if      (hsh < 0.16f) { tr = 1.08f; tg = 0.82f; tb = 0.94f; } // rose
+            else if (hsh < 0.30f) { tr = 0.82f; tg = 0.94f; tb = 1.12f; } // blue
+            else if (hsh < 0.42f) { tr = 1.10f; tg = 1.00f; tb = 0.74f; } // gold
+
+            // Base: darker shadows + brighter lit tiles = more "disco" punch
+            float base = (52.0f + diff * 188.0f) * tileVar;
+            int r_ch = juce::jlimit(0, 255, (int)(base * tr        + spec * 255.0f));
+            int g_ch = juce::jlimit(0, 255, (int)(base * tg * 0.93f + spec * 215.0f));
+            int b_ch = juce::jlimit(0, 255, (int)(base * tb * 0.97f + spec * 240.0f));
 
             // Project to 2D
             Face f;
             f.depth = (rz[0] + rz[1] + rz[2] + rz[3]) * 0.25f;
             f.col = juce::Colour((juce::uint8)r_ch, (juce::uint8)g_ch, (juce::uint8)b_ch);
+            f.spec = spec;
             for (int i = 0; i < 4; ++i)
             {
                 f.x[i] = cx + rx[i] * R;
                 f.y[i] = cy + sy[i] * R;
             }
+            f.fcx = (f.x[0] + f.x[1] + f.x[2] + f.x[3]) * 0.25f;
+            f.fcy = (f.y[0] + f.y[1] + f.y[2] + f.y[3]) * 0.25f;
             faces.push_back(f);
         }
     }
@@ -3073,6 +3094,23 @@ void TsyganatorEditor::draw3DDiscoBall(juce::Graphics& g, float cx, float cy, fl
         // Subtle grid lines between facets
         g.setColour(juce::Colours::black.withAlpha(0.12f));
         g.strokePath(quad, juce::PathStrokeType(0.5f));
+
+        // Sparkle: the brightest mirror tiles pop with a bloom (+ a star cross
+        // for the very brightest). Faces are back-to-front, so glints land on top.
+        if (f.spec > 0.42f)
+        {
+            float gl = juce::jlimit(0.0f, 1.0f, (f.spec - 0.42f) * 1.8f);
+            float gr = R * 0.11f * gl;
+            g.setColour(juce::Colours::white.withAlpha(0.85f * gl));
+            g.fillEllipse(f.fcx - gr, f.fcy - gr, gr * 2.0f, gr * 2.0f);
+            if (f.spec > 0.72f)
+            {
+                float sr = R * 0.26f * gl;
+                g.setColour(juce::Colours::white.withAlpha(0.55f * gl));
+                g.drawLine(f.fcx - sr, f.fcy, f.fcx + sr, f.fcy, 1.0f);
+                g.drawLine(f.fcx, f.fcy - sr, f.fcx, f.fcy + sr, 1.0f);
+            }
+        }
     }
 
     // Rim light overlay
