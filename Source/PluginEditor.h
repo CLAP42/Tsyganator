@@ -27,6 +27,35 @@ public:
 
     void setMode(bool isBelgian);
 
+    // --- Theme-aware relief -------------------------------------------------
+    // Depth used to be drawn with fixed black shadows and very faint white
+    // highlights. Measured on the actual card colours, that gives:
+    //   Belgian card (#E0C232): black@30% = 2.00:1 visible, white@15% = 1.09:1 invisible
+    //   Italian card (#1F0E30): black@30% = 1.06:1 INVISIBLE, white@15% = 1.54:1 visible
+    // You cannot darken near-black, so on the dark theme the whole shadow-based
+    // modelling collapsed. These helpers pick the ink that actually shows.
+    bool darkSurface = false;   // set by setMode()
+
+    /** Ink that stays visible against the current card: black on light themes,
+        white on dark ones. Use for grooves, insets and separators. */
+    juce::Colour surfaceContrast(float strength) const
+    {
+        return darkSurface ? juce::Colours::white.withAlpha(strength * 0.5f)
+                           : juce::Colours::black.withAlpha(strength);
+    }
+
+    /** A lit edge. Needs to be much stronger on a dark surface to register. */
+    juce::Colour reliefHighlight(float strength) const
+    {
+        return juce::Colours::white.withAlpha(darkSurface ? strength * 2.4f : strength);
+    }
+
+    /** A cast shadow. Still black, but pointless to push hard on a dark surface. */
+    juce::Colour reliefShadow(float strength) const
+    {
+        return juce::Colours::black.withAlpha(darkSurface ? strength * 0.5f : strength);
+    }
+
     // Custom rotary slider (3D metallic knobs with indicator)
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height,
                          float sliderPosProportional, float rotaryStartAngle,

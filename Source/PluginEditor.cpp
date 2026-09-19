@@ -44,6 +44,7 @@ TsyganatorLookAndFeel::TsyganatorLookAndFeel()
     italianScheme.knobOutline= juce::Colour(0xFFC8A8E0);   // Light plum-lavender fader thumb
 
     currentScheme = belgianScheme;
+    darkSurface = false;
 
     // Load embedded fonts from BinaryData
     outfitBoldTypeface = juce::Typeface::createSystemTypefaceFor(
@@ -57,6 +58,8 @@ TsyganatorLookAndFeel::TsyganatorLookAndFeel()
 void TsyganatorLookAndFeel::setMode(bool isBelgian)
 {
     currentScheme = isBelgian ? belgianScheme : italianScheme;
+    // Belgian cards are gold (light); Italian cards are deep plum (dark).
+    darkSurface = ! isBelgian;
 }
 
 // Cleanup L: TsyganatorLookAndFeel::setImages() removed — the knob /
@@ -290,7 +293,7 @@ void TsyganatorLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, in
 
     // === Tick marks on sides (subtle scale) ===
     {
-        g.setColour(currentScheme.text.withAlpha(0.15f));
+        g.setColour(currentScheme.text.withAlpha(darkSurface ? 0.28f : 0.15f));
         float tickSpacing = (bottomY - topY) / 10.0f;
         for (int i = 0; i <= 10; ++i)
         {
@@ -303,13 +306,15 @@ void TsyganatorLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, in
     // === Recessed groove (narrow center channel) ===
     {
         float grooveW = 5.0f;
-        g.setColour(juce::Colours::black.withAlpha(0.3f));
+        // The groove marks the fader's FULL travel, so it has to read on both
+        // themes: black on gold, white on plum.
+        g.setColour(surfaceContrast(0.30f));
         g.fillRoundedRectangle(centerX - grooveW / 2.0f, topY, grooveW, bottomY - topY, 2.5f);
-        // Inset shadow
-        g.setColour(juce::Colours::black.withAlpha(0.15f));
+        // Inset edge
+        g.setColour(surfaceContrast(0.15f));
         g.drawLine(centerX - grooveW / 2.0f, topY + 2.0f, centerX - grooveW / 2.0f, bottomY - 2.0f, 0.5f);
-        // Highlight on right side
-        g.setColour(juce::Colours::white.withAlpha(0.06f));
+        // Lit edge on the right
+        g.setColour(reliefHighlight(0.06f));
         g.drawLine(centerX + grooveW / 2.0f, topY + 2.0f, centerX + grooveW / 2.0f, bottomY - 2.0f, 0.5f);
     }
 
@@ -341,8 +346,8 @@ void TsyganatorLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, in
         float thumbX = centerX - thumbW / 2.0f;
         float thumbY = sliderPos - thumbH / 2.0f;
 
-        // Shadow under thumb
-        g.setColour(juce::Colours::black.withAlpha(0.3f));
+        // Cast shadow — carries the relief on light themes, barely registers on dark
+        g.setColour(reliefShadow(0.3f));
         g.fillRoundedRectangle(thumbX + 1.0f, thumbY + 2.0f, thumbW, thumbH, 2.0f);
 
         // Thumb body gradient
@@ -351,8 +356,8 @@ void TsyganatorLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, in
         g.setGradientFill(thumbGrad);
         g.fillRoundedRectangle(thumbX, thumbY, thumbW, thumbH, 2.0f);
 
-        // Top highlight
-        g.setColour(juce::Colours::white.withAlpha(0.15f));
+        // Top highlight — this is what models the thumb on a dark surface
+        g.setColour(reliefHighlight(0.15f));
         g.drawLine(thumbX + 2.0f, thumbY + 1.0f, thumbX + thumbW - 2.0f, thumbY + 1.0f, 1.0f);
 
         // Center groove line
@@ -360,7 +365,7 @@ void TsyganatorLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, in
         g.drawLine(thumbX + 3.0f, thumbY + thumbH / 2.0f, thumbX + thumbW - 3.0f, thumbY + thumbH / 2.0f, 1.0f);
 
         // Bottom shadow
-        g.setColour(juce::Colours::black.withAlpha(0.1f));
+        g.setColour(reliefShadow(0.1f));
         g.drawLine(thumbX + 2.0f, thumbY + thumbH - 1.0f, thumbX + thumbW - 2.0f, thumbY + thumbH - 1.0f, 0.5f);
     }
 
@@ -2153,8 +2158,8 @@ void TsyganatorEditor::paint(juce::Graphics& g)
 
         // Step number at top
         {
-            g.setFont(juce::Font(juce::FontOptions("JetBrains Mono", 8.0f, juce::Font::plain)));
-            g.setColour(textColour.withAlpha(0.3f));
+            g.setFont(juce::Font(juce::FontOptions("JetBrains Mono", 9.0f, juce::Font::bold)));
+            g.setColour(textColour.withAlpha(0.55f));   // was 0.3 at 8pt plain: unreadable
             g.drawText(juce::String(i + 1), stepX + 2, SEQ_GRID_Y + 4, stepWidth - 6, 10,
                        juce::Justification::centred);
         }
@@ -2296,6 +2301,14 @@ void TsyganatorEditor::paintOverChildren(juce::Graphics& g)
         // Dim STEP SEQUENCER card (Row 4) when not in seq modes
         if (!seqActive_dm)
             paintDimmedZone({ 14.0f, 428.0f, 1332.0f, 126.0f });
+
+        // Dim the arpeggiator's rate/mode combos when the arp is not running.
+        // They sit inside the PLAY MODE card and were the only controls in the
+        // whole editor that ignored the mode-dimming convention.
+        if (playMode != TsyganatorProcessor::ModeArp)
+            paintDimmedZone(arpRateCombo.getBounds()
+                              .getUnion(arpModeCombo.getBounds())
+                              .expanded(3).toFloat());
 
         // Dim SAMPLE card when not in sample mode
         if (!sampleActive_dm)
@@ -2548,9 +2561,11 @@ void TsyganatorEditor::layoutRow2()
     {
         const int masterX        = 1100;
         const int masterW        = 246;
-        const int masterKnobSize = 68;
+        // Was 68 px: the only knob bigger than its row. PERF / LFO / VINTAGE
+        // in the same row are 60 px, so it now matches them exactly.
+        const int masterKnobSize = 60;
         const int masterKnobX    = masterX + (masterW - masterKnobSize) / 2;
-        const int masterKnobY    = 252;   // hard-pinned: see comment above
+        const int masterKnobY    = 256;   // centre stays at 286, aligned with the row
         masterGainSlider.setBounds(masterKnobX, masterKnobY, masterKnobSize, masterKnobSize);
         masterGainLabel.setBounds(-100, -100, 1, 1);
         const int dbW = 100;
@@ -2972,8 +2987,10 @@ void TsyganatorEditor::comboBoxChanged(juce::ComboBox* /*comboBoxThatHasChanged*
 
 void TsyganatorEditor::draw3DDiscoBall(juce::Graphics& g, float cx, float cy, float R, float angle)
 {
-    const int latSteps = 10;
-    const int lonSteps = 16;
+    // Was 10x16. At the ~65 px it is drawn, that coarse a grid made the
+    // OUTLINE visibly polygonal — the clearest tell that it was not a sphere.
+    const int latSteps = 14;
+    const int lonSteps = 22;
     float pi = juce::MathConstants<float>::pi;
 
     // Light direction (normalized) — matching HTML: (-0.5, -0.6, 0.7)
@@ -3051,11 +3068,12 @@ void TsyganatorEditor::draw3DDiscoBall(juce::Graphics& g, float cx, float cy, fl
             else if (hsh < 0.30f) { tr = 0.82f; tg = 0.94f; tb = 1.12f; } // blue
             else if (hsh < 0.42f) { tr = 1.10f; tg = 1.00f; tb = 0.74f; } // gold
 
-            // Base: darker shadows + brighter lit tiles = more "disco" punch
-            float base = (52.0f + diff * 188.0f) * tileVar;
-            int r_ch = juce::jlimit(0, 255, (int)(base * tr        + spec * 255.0f));
-            int g_ch = juce::jlimit(0, 255, (int)(base * tg * 0.93f + spec * 215.0f));
-            int b_ch = juce::jlimit(0, 255, (int)(base * tb * 0.97f + spec * 240.0f));
+            // Chrome, not grey plastic: deeper shadows, brighter speculars and
+            // a slightly cool cast so the tiles read as mirrors.
+            float base = (34.0f + diff * 214.0f) * tileVar;
+            int r_ch = juce::jlimit(0, 255, (int)(base * tr * 0.97f + spec * 255.0f));
+            int g_ch = juce::jlimit(0, 255, (int)(base * tg * 0.99f + spec * 225.0f));
+            int b_ch = juce::jlimit(0, 255, (int)(base * tb * 1.06f + spec * 255.0f));
 
             // Project to 2D
             Face f;
@@ -3077,6 +3095,15 @@ void TsyganatorEditor::draw3DDiscoBall(juce::Graphics& g, float cx, float cy, fl
     std::sort(faces.begin(), faces.end(), [](const Face& a, const Face& b) {
         return a.depth < b.depth;
     });
+
+    // Clip everything to a true circle. Even with a finer grid the quad mesh
+    // leaves a faceted outline; this guarantees a clean silhouette.
+    g.saveState();
+    {
+        juce::Path ball;
+        ball.addEllipse(cx - R, cy - R, R * 2.0f, R * 2.0f);
+        g.reduceClipRegion(ball);
+    }
 
     // Draw faces
     for (auto& f : faces)
@@ -3112,6 +3139,18 @@ void TsyganatorEditor::draw3DDiscoBall(juce::Graphics& g, float cx, float cy, fl
             }
         }
     }
+
+    // Limb darkening — a flat-shaded mesh reads as a disc until the edge falls
+    // off. This is what actually makes it look spherical.
+    {
+        juce::ColourGradient limb(juce::Colours::transparentBlack, cx, cy,
+                                  juce::Colours::black.withAlpha(0.55f), cx, cy - R, true);
+        limb.addColour(0.72, juce::Colours::transparentBlack);
+        g.setGradientFill(limb);
+        g.fillEllipse(cx - R, cy - R, R * 2.0f, R * 2.0f);
+    }
+
+    g.restoreState();   // end circular clip
 
     // Rim light overlay
     {
