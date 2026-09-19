@@ -115,3 +115,9 @@ venv/
 # ...mais on garde les déchets macOS hors de builds/
 builds/**/.DS_Store
 builds/**/._*
+
+# ---- Render-reference test ----
+# tests/out/ is regenerated on every run. Reference .wav files are a listening
+# convenience regenerated from the .f32, which is the actual contract.
+tests/out/
+tests/reference/*.wav

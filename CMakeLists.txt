@@ -137,3 +137,55 @@ target_compile_definitions(Tsyganator
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
 )
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Offline render-reference test harness  (tests/RenderReference.cpp)
+# ─────────────────────────────────────────────────────────────────────────────
+#  OFF by default on purpose: a normal ./BUILD.sh produces exactly the same
+#  plugin artefacts as before this target existed. The test script enables it
+#  in its OWN build directory (build-tests/), never in build/.
+#
+#      cmake -B build-tests -DTSYG_BUILD_TESTS=ON
+#      cmake --build build-tests --target tsyg_render
+#
+#  It compiles the plugin sources directly (rather than linking the plugin
+#  target) so it stays completely independent of the VST3/AU/Standalone wrappers.
+# ─────────────────────────────────────────────────────────────────────────────
+option(TSYG_BUILD_TESTS "Build the offline render-reference harness" OFF)
+
+if(TSYG_BUILD_TESTS)
+    juce_add_console_app(tsyg_render PRODUCT_NAME "tsyg_render")
+
+    target_sources(tsyg_render
+        PRIVATE
+            tests/RenderReference.cpp
+            Source/PluginProcessor.cpp
+            Source/PluginEditor.cpp
+    )
+
+    target_include_directories(tsyg_render
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    )
+
+    target_link_libraries(tsyg_render
+        PRIVATE
+            juce::juce_audio_utils
+            juce::juce_audio_processors
+            juce::juce_audio_formats
+            juce::juce_gui_extra
+            juce::juce_dsp
+            TsyganatorData
+        PUBLIC
+            juce::juce_recommended_config_flags
+            juce::juce_recommended_warning_flags
+    )
+
+    target_compile_definitions(tsyg_render
+        PUBLIC
+            JUCE_WEB_BROWSER=0
+            JUCE_USE_CURL=0
+            JUCE_DISPLAY_SPLASH_SCREEN=0
+            JUCE_STANDALONE_APPLICATION=1
+    )
+endif()
