@@ -320,6 +320,17 @@ void TsyganatorProcessor::prepareToPlay(double sampleRate, int /*samplesPerBlock
     samplePlayer.setHostSampleRate(sampleRate);
     vintage.setSampleRate(sampleRate);
     vintage.reset();
+
+    // Parameter smoothing. Starting current == target means a render whose
+    // parameters never move is unaffected by smoothing; only actual parameter
+    // movement is ramped.
+    const double rampSeconds = 0.02;   // 20 ms
+    smoothedCutoff.reset     (sampleRate, rampSeconds);
+    smoothedResonance.reset  (sampleRate, rampSeconds);
+    smoothedMasterGain.reset (sampleRate, rampSeconds);
+    smoothedCutoff.setCurrentAndTargetValue     (juce::jmax (20.0f, params.cutoff->load()));
+    smoothedResonance.setCurrentAndTargetValue  (params.resonance->load());
+    smoothedMasterGain.setCurrentAndTargetValue (params.masterGain->load());
 }
 
 void TsyganatorProcessor::killAllNotes()
@@ -359,7 +370,6 @@ void TsyganatorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::M
     int chorusIdx = juce::roundToInt(params.chorusMode->load());
     chorus.setMode(static_cast<JunoChorus::Mode>(std::clamp(chorusIdx, 0, 3)));
 
-    float masterGain = params.masterGain->load();
 
     // Vintage processor parameters
     bool vintageOn = juce::roundToInt(params.vintageMode->load()) == 1;
@@ -443,24 +453,193 @@ void TsyganatorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::M
     // the end which silently dropped everything we didn't explicitly handle.
     // Strategy: build pendingMidiOut as the FULL output buffer here, then swap
     // it into midiMessages at the end of processBlock.
-    auto passthroughIfHandledNoteOrCC = [&](const juce::MidiMessage& msg, int samplePos)
-    {
-        // We add note-on/off to pendingMidiOut explicitly per play-mode below.
-        // Other messages we already consumed (pitch bend, CC1, CC123) are intentionally
-        // NOT echoed (we re-emit semantics ourselves via voices); everything else
-        // we haven't touched should pass through.
-        bool consumedByUs = msg.isPitchWheel()
-                         || (msg.isController() && (msg.getControllerNumber() == 1
-                                                  || msg.getControllerNumber() == 123));
-        bool willEchoExplicitly = msg.isNoteOn() || msg.isNoteOff();
-        if (!consumedByUs && !willEchoExplicitly)
-            pendingMidiOut.addEvent(msg, samplePos);
-    };
 
-    // Process MIDI based on play mode
+    // ---- Unison / stereo staging (constant across the block) --------------
+    bool  unisonOn     = juce::roundToInt(params.unisonMode->load()) == 1;
+    float unisonScale  = unisonOn ? (1.0f / std::sqrt((float)NUM_VOICES)) : 1.0f;
+    float stereoSpread = params.stereoSpread->load();
+    blockKeyTrack      = params.keyTracking->load();
+
+    // Smoothing targets for this block (ramped per sample in renderSegment).
+    smoothedCutoff.setTargetValue     (juce::jmax (20.0f, params.cutoff->load()));
+    smoothedResonance.setTargetValue  (params.resonance->load());
+    smoothedMasterGain.setTargetValue (params.masterGain->load());
+
+    // ---- Sample-accurate event dispatch -----------------------------------
+    // The block is split at every incoming MIDI event so a note starts on the
+    // exact sample the host asked for. Previously the whole block's MIDI was
+    // consumed up front, which fired every note at the block's first sample:
+    // note timing quantised to the buffer size (up to 10.7 ms at 48 kHz / 512)
+    // and the rendered output changed when the user changed the buffer size.
+    int cursor = 0;
     for (const auto metadata : midiMessages)
     {
-        auto msg = metadata.getMessage();
+        const int evPos = juce::jlimit (0, numSamples, metadata.samplePosition);
+
+        if (evPos > cursor)
+        {
+            renderSegment (outL, outR, cursor, evPos - cursor, unisonScale, stereoSpread);
+            cursor = evPos;
+        }
+
+        handleMidiEvent (metadata.getMessage(), evPos);
+
+        // Pitch bend / mod wheel may have just changed — refresh immediately
+        // rather than one block late.
+        updateVoiceParams();
+    }
+
+    if (cursor < numSamples)
+        renderSegment (outL, outR, cursor, numSamples - cursor, unisonScale, stereoSpread);
+
+    // Incoming MIDI is consumed; what should reach the host is in pendingMidiOut.
+    midiMessages.clear();
+
+    // Copy pending MIDI output to the host buffer for DAW recording
+    midiMessages.addEvents(pendingMidiOut, 0, numSamples, 0);
+
+    // Update peak level for UI (mascot reactivity)
+    float peak = 0.0f;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        float absL = std::abs(outL[i]);
+        if (absL > peak) peak = absL;
+        if (outR)
+        {
+            float absR = std::abs(outR[i]);
+            if (absR > peak) peak = absR;
+        }
+    }
+    peakLevel.store(peak, std::memory_order_relaxed);
+}
+
+//==============================================================================
+//  Renders [startSample, startSample+numSamples) of the output. Split out of
+//  processBlock so the block can be rendered in pieces between MIDI events.
+//==============================================================================
+void TsyganatorProcessor::renderSegment (float* outL, float* outR,
+                                         int startSample, int numSamples,
+                                         float unisonScale, float stereoSpread)
+{
+    for (int k = 0; k < numSamples; ++k)
+    {
+        const int i = startSample + k;
+        currentRenderSample = i;
+
+        // Advance sequencer or arpeggiator
+        if (isSequencerActive())
+            sequencer.process();
+        if (isArpActive())
+            arpeggiator.process();
+
+        // Advance LFO
+        float lfoVal = lfo.process();
+        float lfoCutoffMod  = lfo.getCutoffMod(lfoVal);
+        float lfoPwMod      = lfo.getPulseWidthMod(lfoVal);
+        float lfoPitchMod   = lfo.getPitchMod(lfoVal);
+        float lfoVolMod     = lfo.getVolumeMod(lfoVal);
+
+        // Filter parameters, smoothed per sample. These used to be applied
+        // once per block by updateVoiceParams(), which stepped audibly when a
+        // cutoff knob or automation lane moved.
+        const float cutS    = smoothedCutoff.getNextValue();
+        const float resoS   = smoothedResonance.getNextValue();
+        const float mwBoost = modWheelValue * 4000.0f;
+
+        float monoL = 0.0f, monoR = 0.0f;
+        for (int vi = 0; vi < NUM_VOICES; ++vi)
+        {
+            auto& v = voices[vi];
+            if (v.isActive())
+            {
+                float trackOffset = 0.0f;
+                if (blockKeyTrack > 0.0f && v.getCurrentNote() >= 0)
+                    trackOffset = (float) (v.getCurrentNote() - 60) * (cutS / 60.0f) * blockKeyTrack;
+                v.setFilterCutoff (cutS + trackOffset + mwBoost);
+                v.setFilterResonance (resoS);
+
+                v.applyLFOMod(lfoCutoffMod, lfoPwMod, lfoPitchMod);
+                float sample = v.process() * lfoVolMod;
+
+                // Stereo spread: pan each voice across the stereo field
+                if (stereoSpread > 0.001f && NUM_VOICES > 1)
+                {
+                    // Voice 0 pans left, voice N-1 pans right
+                    float pan = (float)vi / (float)(NUM_VOICES - 1); // 0..1
+                    pan = 0.5f + (pan - 0.5f) * stereoSpread;       // narrow around center
+                    float gainL = std::cos(pan * 1.5707963f);        // equal-power pan
+                    float gainR = std::sin(pan * 1.5707963f);
+                    monoL += sample * gainL;
+                    monoR += sample * gainR;
+                }
+                else
+                {
+                    monoL += sample;
+                    monoR += sample;
+                }
+            }
+        }
+
+        // Apply unison normalization
+        monoL *= unisonScale;
+        monoR *= unisonScale;
+
+        // Mix in sample player
+        float sampleOut = samplePlayer.process();
+        monoL += sampleOut;
+        monoR += sampleOut;
+
+        // (P37: LoFi/Crush stage removed — signal now goes straight to chorus.)
+
+        // P1-2: Chorus is mono-sum-in / stereo-out by design. To preserve the
+        // pre-chorus stereo image, we sum to mono for the wet ensemble effect
+        // and then mix the dry stereo back on top. This was previously broken:
+        // the diff was injected at 0.25× while the dry stereo was already lost
+        // into the mono sum. Now: clean dry/wet stereo blend.
+        const float monoSum = (monoL + monoR) * 0.5f;
+        float wetL, wetR;
+        chorus.process(monoSum, wetL, wetR);
+
+        // Dry stereo cross-fades with wet chorus (P37: no LoFi stage anymore)
+        // based on stereoSpread: 0 = pure mono-summed-then-chorus,
+        // 1 = max stereo where dry channels dominate.
+        const float wetAmt = 1.0f - stereoSpread * 0.5f;  // 1.0 → 0.5
+        const float dryAmt = stereoSpread * 0.5f;          // 0.0 → 0.5
+        float left  = wetL * wetAmt + monoL * dryAmt;
+        float right = wetR * wetAmt + monoR * dryAmt;
+
+        // Vintage processor (drive, EQ, bass mono, compression)
+        vintage.process(left, right);
+
+        // Apply master gain (smoothed: block-rate steps were audible)
+        const float mg = smoothedMasterGain.getNextValue();
+        left *= mg;
+        right *= mg;
+
+        // Soft clipper (tanh) — prevents hard digital clipping
+        left = std::tanh(left);
+        right = std::tanh(right);
+
+        outL[i] = left;
+        if (outR) outR[i] = right;
+    }
+}
+
+//==============================================================================
+//  Handles one incoming MIDI message at its exact sample position.
+//==============================================================================
+void TsyganatorProcessor::handleMidiEvent (const juce::MidiMessage& msg, int samplePos)
+{
+    auto passthroughIfHandledNoteOrCC = [&](const juce::MidiMessage& m, int sp)
+    {
+        bool consumedByUs = m.isPitchWheel()
+                         || (m.isController() && (m.getControllerNumber() == 1
+                                                || m.getControllerNumber() == 123));
+        bool willEchoExplicitly = m.isNoteOn() || m.isNoteOff();
+        if (!consumedByUs && !willEchoExplicitly)
+            pendingMidiOut.addEvent(m, sp);
+    };
+
 
         // Pitch bend and CC messages apply globally regardless of play mode
         if (msg.isPitchWheel())
@@ -468,20 +647,20 @@ void TsyganatorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::M
             int pbValue = msg.getPitchWheelValue();
             pitchBendSemitones = ((float)pbValue - 8192.0f) / 8192.0f * 2.0f;
             // Echo pitch bend to host so a recording DAW captures it
-            pendingMidiOut.addEvent(msg, metadata.samplePosition);
-            continue;
+            pendingMidiOut.addEvent(msg, samplePos);
+            return;
         }
         if (msg.isController())
         {
             int cc = msg.getControllerNumber();
             if (cc == 1)  { modWheelValue = msg.getControllerValue() / 127.0f;
-                            pendingMidiOut.addEvent(msg, metadata.samplePosition); continue; }
+                            pendingMidiOut.addEvent(msg, samplePos); return; }
             if (cc == 123){ killAllNotes(); pitchBendSemitones = 0.0f; modWheelValue = 0.0f;
-                            pendingMidiOut.addEvent(msg, metadata.samplePosition); continue; }
+                            pendingMidiOut.addEvent(msg, samplePos); return; }
         }
 
         // Pass through anything we don't explicitly handle (sysex, PC, aftertouch…)
-        passthroughIfHandledNoteOrCC(msg, metadata.samplePosition);
+        passthroughIfHandledNoteOrCC(msg, samplePos);
 
         switch (playMode)
         {
@@ -490,7 +669,7 @@ void TsyganatorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::M
                 handleMidiMessage(msg);
                 // Pass-through: echo MIDI to output so DAW sees note activity
                 if (msg.isNoteOn() || msg.isNoteOff())
-                    pendingMidiOut.addEvent(msg, metadata.samplePosition);
+                    pendingMidiOut.addEvent(msg, samplePos);
                 break;
 
             case ModeArp:
@@ -550,137 +729,9 @@ void TsyganatorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::M
                 handleMidiMessage(msg);
                 // Pass-through keyboard notes to MIDI output
                 if (msg.isNoteOn() || msg.isNoteOff())
-                    pendingMidiOut.addEvent(msg, metadata.samplePosition);
+                    pendingMidiOut.addEvent(msg, samplePos);
                 break;
         }
-    }
-
-    // Clear incoming MIDI — we've processed all messages above, and what
-    // should appear on output is now staged inside pendingMidiOut.
-    // (Sequencer/arp callbacks in the sample loop below will also write
-    // additional events into pendingMidiOut.)
-    midiMessages.clear();
-
-    // P1-6: re-apply voice params now that pitchBend/modWheel have been
-    // updated by the MIDI loop above. Previous code called updateVoiceParams()
-    // before reading MIDI, so bend/mod changes were always one block late.
-    // Calling it again here is cheap (simple atomic loads + voice setters)
-    // and removes the audible ~1.5ms latency on fast bends.
-    updateVoiceParams();
-
-    // Check unison mode for voice normalization
-    bool unisonOn = juce::roundToInt(params.unisonMode->load()) == 1;
-    // Unison uses all 6 voices on one note — normalize to prevent clipping
-    float unisonScale = unisonOn ? (1.0f / std::sqrt((float)NUM_VOICES)) : 1.0f;
-
-    // Stereo spread — voice panning across stereo field
-    float stereoSpread = params.stereoSpread->load();
-
-    // Render audio sample by sample
-    for (int i = 0; i < numSamples; ++i)
-    {
-        currentRenderSample = i;
-
-        // Advance sequencer or arpeggiator
-        if (isSequencerActive())
-            sequencer.process();
-        if (isArpActive())
-            arpeggiator.process();
-
-        // Advance LFO
-        float lfoVal = lfo.process();
-        float lfoCutoffMod  = lfo.getCutoffMod(lfoVal);
-        float lfoPwMod      = lfo.getPulseWidthMod(lfoVal);
-        float lfoPitchMod   = lfo.getPitchMod(lfoVal);
-        float lfoVolMod     = lfo.getVolumeMod(lfoVal);
-
-        float monoL = 0.0f, monoR = 0.0f;
-        for (int vi = 0; vi < NUM_VOICES; ++vi)
-        {
-            auto& v = voices[vi];
-            if (v.isActive())
-            {
-                v.applyLFOMod(lfoCutoffMod, lfoPwMod, lfoPitchMod);
-                float sample = v.process() * lfoVolMod;
-
-                // Stereo spread: pan each voice across the stereo field
-                if (stereoSpread > 0.001f && NUM_VOICES > 1)
-                {
-                    // Voice 0 pans left, voice N-1 pans right
-                    float pan = (float)vi / (float)(NUM_VOICES - 1); // 0..1
-                    pan = 0.5f + (pan - 0.5f) * stereoSpread;       // narrow around center
-                    float gainL = std::cos(pan * 1.5707963f);        // equal-power pan
-                    float gainR = std::sin(pan * 1.5707963f);
-                    monoL += sample * gainL;
-                    monoR += sample * gainR;
-                }
-                else
-                {
-                    monoL += sample;
-                    monoR += sample;
-                }
-            }
-        }
-
-        // Apply unison normalization
-        monoL *= unisonScale;
-        monoR *= unisonScale;
-
-        // Mix in sample player
-        float sampleOut = samplePlayer.process();
-        monoL += sampleOut;
-        monoR += sampleOut;
-
-        // (P37: LoFi/Crush stage removed — signal now goes straight to chorus.)
-
-        // P1-2: Chorus is mono-sum-in / stereo-out by design. To preserve the
-        // pre-chorus stereo image, we sum to mono for the wet ensemble effect
-        // and then mix the dry stereo back on top. This was previously broken:
-        // the diff was injected at 0.25× while the dry stereo was already lost
-        // into the mono sum. Now: clean dry/wet stereo blend.
-        const float monoSum = (monoL + monoR) * 0.5f;
-        float wetL, wetR;
-        chorus.process(monoSum, wetL, wetR);
-
-        // Dry stereo cross-fades with wet chorus (P37: no LoFi stage anymore)
-        // based on stereoSpread: 0 = pure mono-summed-then-chorus,
-        // 1 = max stereo where dry channels dominate.
-        const float wetAmt = 1.0f - stereoSpread * 0.5f;  // 1.0 → 0.5
-        const float dryAmt = stereoSpread * 0.5f;          // 0.0 → 0.5
-        float left  = wetL * wetAmt + monoL * dryAmt;
-        float right = wetR * wetAmt + monoR * dryAmt;
-
-        // Vintage processor (drive, EQ, bass mono, compression)
-        vintage.process(left, right);
-
-        // Apply master gain
-        left *= masterGain;
-        right *= masterGain;
-
-        // Soft clipper (tanh) — prevents hard digital clipping
-        left = std::tanh(left);
-        right = std::tanh(right);
-
-        outL[i] = left;
-        if (outR) outR[i] = right;
-    }
-
-    // Copy pending MIDI output to the host buffer for DAW recording
-    midiMessages.addEvents(pendingMidiOut, 0, numSamples, 0);
-
-    // Update peak level for UI (mascot reactivity)
-    float peak = 0.0f;
-    for (int i = 0; i < numSamples; ++i)
-    {
-        float absL = std::abs(outL[i]);
-        if (absL > peak) peak = absL;
-        if (outR)
-        {
-            float absR = std::abs(outR[i]);
-            if (absR > peak) peak = absR;
-        }
-    }
-    peakLevel.store(peak, std::memory_order_relaxed);
 }
 
 void TsyganatorProcessor::handleMidiMessage(const juce::MidiMessage& msg)
@@ -811,10 +862,7 @@ void TsyganatorProcessor::updateVoiceParams()
     const int   osc2OctVal    = juce::roundToInt(params.osc2Octave->load()) - 2;
     const float osc2Fine      = params.osc2Fine->load();
 
-    const float cutoff        = params.cutoff->load();
-    const float reso          = params.resonance->load();
     const float fEnvAmt       = params.filterEnvAmount->load();
-    const float keyTrack      = params.keyTracking->load();
 
     const float fA = params.filterAttack->load();
     const float fD = params.filterDecay->load();
@@ -829,8 +877,6 @@ void TsyganatorProcessor::updateVoiceParams()
     const float portamento    = params.portamento->load();
     const float globalFineTune = params.globalFineTune->load();
 
-    // Mod wheel → cutoff boost (up to +4000 Hz)
-    const float modWheelCutoffBoost = modWheelValue * 4000.0f;
 
     for (int i = 0; i < NUM_VOICES; ++i)
     {
@@ -853,15 +899,8 @@ void TsyganatorProcessor::updateVoiceParams()
         v.setOsc2Octave(osc2OctVal);
         v.setOsc2Fine(osc2Fine);
 
-        // Key tracking
-        float trackOffset = 0.0f;
-        if (keyTrack > 0.0f && v.isActive() && v.getCurrentNote() >= 0)
-        {
-            float semitones = (float)(v.getCurrentNote() - 60);
-            trackOffset = semitones * (cutoff / 60.0f) * keyTrack;
-        }
-        v.setFilterCutoff(cutoff + trackOffset + modWheelCutoffBoost);
-        v.setFilterResonance(reso);
+        // NOTE: cutoff, resonance and key tracking are no longer set here.
+        // They are smoothed and applied per sample in renderSegment().
         v.setFilterEnvAmount(fEnvAmt);
         v.setFilterADSR(fA, fD, fS, fR);
         v.setAmpADSR(aA, aD, aS, aR);

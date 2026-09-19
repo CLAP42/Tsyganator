@@ -54,6 +54,9 @@ struct Scenario
     double       seconds;
     std::function<void (TsyganatorProcessor&)>          setup;
     std::function<std::vector<MidiEvent> (double)>      midi;
+    // Optional: called before every block with progress in [0,1]. Scenarios
+    // that leave it null render exactly as they did before this hook existed.
+    std::function<void (TsyganatorProcessor&, double)>   automate;
 };
 
 //==============================================================================
@@ -232,6 +235,50 @@ std::vector<Scenario> buildScenarios()
         }
     });
 
+    // ---- 4. Parameter automation: the zipper-noise witness ----
+    //  Sweeps cutoff and master gain WHILE a note sustains. Without parameter
+    //  smoothing the engine applies these once per block, so the output steps
+    //  at every block boundary. This scenario is what makes that audible and
+    //  measurable; the three above deliberately hold every parameter still.
+    s.push_back ({
+        "automation_sweep",
+        "Sustained note while cutoff and master gain are automated (zipper witness)",
+        48000.0, 512, 3.0,
+        [] (TsyganatorProcessor& p)
+        {
+            neutralBase (p);
+            setParam (p, "sawLevel", 0.9f);
+            setParam (p, "pulseLevel", 0.5f);
+            setParam (p, "subLevel", 0.3f);
+            setParam (p, "resonance", 0.75f);     // resonance makes the steps ring
+            setParam (p, "filterEnvAmount", 0.0f);
+            setParam (p, "ampAttack", 0.005f);
+            setParam (p, "ampSustain", 1.0f);
+            setParam (p, "ampRelease", 0.3f);
+            setParam (p, "cutoff", 300.0f);
+            setParam (p, "masterGain", 0.25f);
+        },
+        [] (double sr)
+        {
+            std::vector<MidiEvent> e;
+            e.push_back ({ secToSamp (0.05, sr), juce::MidiMessage::noteOn  (1, 45, 0.9f) });
+            e.push_back ({ secToSamp (2.70, sr), juce::MidiMessage::noteOff (1, 45) });
+            return e;
+        },
+        [] (TsyganatorProcessor& p, double progress)
+        {
+            // Exponential cutoff sweep 300 Hz -> 9 kHz (musically linear)
+            const float cut = 300.0f * std::pow (30.0f, (float) progress);
+            setParam (p, "cutoff", cut);
+
+            // Gain ramp in the last third — amplitude steps are the most
+            // audible form of zipper noise.
+            const float g = (progress < 0.66) ? 0.25f
+                                              : 0.25f + 0.65f * (float) ((progress - 0.66) / 0.34);
+            setParam (p, "masterGain", juce::jlimit (0.0f, 1.0f, g));
+        }
+    });
+
     return s;
 }
 
@@ -249,8 +296,9 @@ juce::AudioBuffer<float> renderScenario (const Scenario& sc)
     std::sort (events.begin(), events.end(),
                [] (const MidiEvent& a, const MidiEvent& b) { return a.samplePos < b.samplePos; });
 
-    const int numBlocks = (int) std::ceil (sc.seconds * sc.sampleRate / sc.blockSize);
-    const int total     = numBlocks * sc.blockSize;
+    // Total length is fixed in samples so renders at different block sizes are
+    // directly comparable; the final block is simply short, as hosts do.
+    const int total = (int) (sc.seconds * sc.sampleRate);
 
     juce::AudioBuffer<float> out (2, total);
     out.clear();
@@ -258,23 +306,27 @@ juce::AudioBuffer<float> renderScenario (const Scenario& sc)
     juce::AudioBuffer<float> block (2, sc.blockSize);
     size_t evIdx = 0;
 
-    for (int b = 0; b < numBlocks; ++b)
+    for (int pos = 0; pos < total; pos += sc.blockSize)
     {
-        const int pos = b * sc.blockSize;
-        block.clear();
+        const int n = juce::jmin (sc.blockSize, total - pos);
+
+        if (sc.automate != nullptr)
+            sc.automate (proc, (double) pos / (double) juce::jmax (1, total - 1));
+
+        juce::AudioBuffer<float> sub (block.getArrayOfWritePointers(), 2, n);
+        sub.clear();
 
         juce::MidiBuffer mb;
-        while (evIdx < events.size() && events[evIdx].samplePos < pos + sc.blockSize)
+        while (evIdx < events.size() && events[evIdx].samplePos < pos + n)
         {
-            mb.addEvent (events[evIdx].msg,
-                         juce::jmax (0, events[evIdx].samplePos - pos));
+            mb.addEvent (events[evIdx].msg, juce::jmax (0, events[evIdx].samplePos - pos));
             ++evIdx;
         }
 
-        proc.processBlock (block, mb);
+        proc.processBlock (sub, mb);
 
         for (int ch = 0; ch < 2; ++ch)
-            out.copyFrom (ch, pos, block, ch, 0, sc.blockSize);
+            out.copyFrom (ch, pos, sub, ch, 0, n);
     }
 
     return out;
@@ -410,8 +462,17 @@ int main (int argc, char* argv[])
         juce::File outDir (args[1]);
         outDir.createDirectory();
 
+        // Optional block-size override. Rendering the same scenario at a very
+        // small block size approximates continuous parameter updates, so the
+        // difference against the normal block size measures how much the output
+        // depends on the host's buffer size — i.e. the parameter-stepping artifact.
+        int blockOverride = 0;
+        for (int i = 1; i < args.size() - 1; ++i)
+            if (args[i] == "--block") blockOverride = args[i + 1].getIntValue();
+
         for (auto& sc : scenarios)
         {
+            if (blockOverride > 0) sc.blockSize = blockOverride;
             std::cout << "rendering " << sc.name << " ... " << std::flush;
             auto buf = renderScenario (sc);
 

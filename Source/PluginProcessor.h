@@ -152,6 +152,22 @@ public:
     }
 
 private:
+    // --- Sample-accurate rendering (see processBlock) -----------------------
+    // The block is split at every incoming MIDI event, so notes start on the
+    // exact sample the host asked for instead of on the block boundary.
+    void renderSegment (float* outL, float* outR, int startSample, int numSamples,
+                        float unisonScale, float stereoSpread);
+    void handleMidiEvent (const juce::MidiMessage& msg, int samplePos);
+
+    // --- Smoothed parameters ------------------------------------------------
+    // Only the continuous values whose block-rate stepping is actually audible.
+    // Cutoff smooths multiplicatively because pitch/frequency is perceived
+    // logarithmically; gain and resonance smooth linearly.
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> smoothedCutoff;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear>        smoothedResonance;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear>        smoothedMasterGain;
+    float blockKeyTrack = 0.0f;   // read once per block, used per sample
+
     static constexpr int NUM_VOICES = 6;
     JunoVoice voices[NUM_VOICES];
     JunoChorus chorus;
