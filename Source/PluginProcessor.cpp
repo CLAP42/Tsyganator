@@ -1,6 +1,19 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+namespace
+{
+    // Linear below the knee, tanh-shaped above it, continuous at the join.
+    inline float softClip (float x) noexcept
+    {
+        constexpr float knee = 0.7f;          // -3.1 dBFS
+        constexpr float span = 1.0f - knee;
+        if (x >  knee) return  knee + span * std::tanh ((x - knee) / span);
+        if (x < -knee) return -knee + span * std::tanh ((x + knee) / span);
+        return x;                              // untouched in normal range
+    }
+}
+
 TsyganatorProcessor::TsyganatorProcessor()
     : AudioProcessor(BusesProperties()
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
@@ -633,9 +646,12 @@ void TsyganatorProcessor::renderSegment (float* outL, float* outR,
         left *= mg;
         right *= mg;
 
-        // Soft clipper (tanh) — prevents hard digital clipping
-        left = std::tanh(left);
-        right = std::tanh(right);
+        // Soft clipper. std::tanh was applied unconditionally, so it shaped the
+        // signal even at low level: tanh(0.5) = 0.462, i.e. ~0.7 dB of loss and
+        // third-harmonic colouring on material that was never near clipping.
+        // Now it is transparent below the knee and only curves above it.
+        left  = softClip (left);
+        right = softClip (right);
 
         outL[i] = left;
         if (outR) outR[i] = right;

@@ -44,17 +44,17 @@ public:
     {
         currentNote = midiNote;
         currentVelocity = velocity;
+        // Base pitch = note + tuning only. Pitch bend and LFO pitch modulation
+        // are applied as a single ratio in process(), so there is exactly ONE
+        // place that writes an oscillator frequency.
         float freq = 440.0f * std::pow(2.0f, (midiNote - 69) / 12.0f);
-        // Apply global fine tune + unison detune offset + pitch bend
         float totalDetune = detuneCents + globalFineCents;
         if (std::abs(totalDetune) > 0.01f)
             freq *= std::pow(2.0f, totalDetune / 1200.0f);
-        if (std::abs(pitchBendSemitones) > 0.001f)
-            freq *= std::pow(2.0f, pitchBendSemitones / 12.0f);
 
         targetFrequency = freq;
 
-        // OSC2 frequency with octave offset and fine detune
+        // OSC2 frequency with octave offset and fine detune (no bend here either)
         float osc2Freq = freq * std::pow(2.0f, (float)osc2Octave) * std::pow(2.0f, osc2FineCents / 1200.0f);
         osc2TargetFreq = osc2Freq;
 
@@ -118,48 +118,26 @@ public:
      * Apply per-sample LFO modulation offsets.
      * Called before process() each sample.
      */
+    /**
+     * Stores the per-sample modulation offsets. It used to write oscillator
+     * frequencies directly, which fought with the portamento glide in
+     * process(): during a glide the glide won and LFO pitch modulation was
+     * silently dropped, and when the modulation happened to land exactly on
+     * zero the oscillator stayed stuck at its last modulated frequency.
+     * Now it only computes the pitch ratio; process() applies it.
+     */
     void applyLFOMod(float cutoffMod, float pwMod, float pitchSemitones)
     {
         lfoCutoffOffset = cutoffMod;
         lfoPwOffset = pwMod;
 
-        // Pitch modulation: shift frequency by semitones (+ unison detune + global fine tune + pitch bend)
-        float totalDetune = detuneCents + globalFineCents;
-        float totalPitchMod = pitchSemitones + pitchBendSemitones;
-        if ((std::abs(totalPitchMod) > 0.001f || std::abs(totalDetune) > 0.01f) && currentNote >= 0)
+        const float totalPitchMod = pitchSemitones + pitchBendSemitones;
+        if (totalPitchMod != cachedPitchMod)
         {
-            // This ran FOUR std::pow calls per sample per voice. Only the pitch
-            // modulation actually changes sample to sample: the note's base
-            // frequency and OSC2's offset are constant until the note or the
-            // tuning changes, so they are cached. Same arithmetic, same order,
-            // bit-identical result.
-            if (currentNote != cachedBaseNote || totalDetune != cachedBaseDetune)
-            {
-                cachedBaseFreq = 440.0f * std::pow(2.0f, (currentNote - 69) / 12.0f);
-                if (std::abs(totalDetune) > 0.01f)
-                    cachedBaseFreq *= std::pow(2.0f, totalDetune / 1200.0f);
-                cachedBaseNote   = currentNote;
-                cachedBaseDetune = totalDetune;
-                cachedOsc2Note   = -9999;      // force OSC2 base refresh
-            }
-
-            if (cachedOsc2Note != currentNote
-                || cachedOsc2Oct != osc2Octave
-                || cachedOsc2Fine != osc2FineCents)
-            {
-                cachedOsc2Base = cachedBaseFreq * std::pow(2.0f, (float)osc2Octave)
-                                                * std::pow(2.0f, osc2FineCents / 1200.0f);
-                cachedOsc2Note = currentNote;
-                cachedOsc2Oct  = osc2Octave;
-                cachedOsc2Fine = osc2FineCents;
-            }
-
-            // The one value that genuinely varies per sample, computed once and
-            // shared by both oscillators (it was evaluated twice before).
-            const float pitchRatio = std::pow(2.0f, totalPitchMod / 12.0f);
-
-            osc.setFrequency (cachedBaseFreq * pitchRatio);
-            osc2.setFrequency(cachedOsc2Base * pitchRatio);
+            pitchModRatio  = (std::abs(totalPitchMod) > 1.0e-6f)
+                                ? std::pow(2.0f, totalPitchMod / 12.0f)
+                                : 1.0f;
+            cachedPitchMod = totalPitchMod;
         }
     }
 
@@ -193,17 +171,16 @@ public:
             return 0.0f;
         }
 
-        // Apply portamento (glide between frequencies) for both oscs
+        // Portamento glides the BASE pitch...
         if (std::abs(currentFrequency - targetFrequency) > 0.01f)
-        {
             currentFrequency += (targetFrequency - currentFrequency) * portamentoCoeff;
-            osc.setFrequency(currentFrequency);
-        }
         if (std::abs(osc2CurrentFreq - osc2TargetFreq) > 0.01f)
-        {
             osc2CurrentFreq += (osc2TargetFreq - osc2CurrentFreq) * portamentoCoeff;
-            osc2.setFrequency(osc2CurrentFreq);
-        }
+
+        // ...and the single write applies bend + LFO on top of it, so glide and
+        // pitch modulation compose instead of overwriting each other.
+        osc.setFrequency (currentFrequency * pitchModRatio);
+        osc2.setFrequency(osc2CurrentFreq * pitchModRatio);
 
         // Apply LFO pulse width modulation (both oscs)
         float modPW = std::clamp(basePW + lfoPwOffset, 0.05f, 0.95f);
@@ -272,12 +249,7 @@ private:
     // Voice-stealing age stamp (set by processor at each noteOn)
     uint64_t ageStamp = 0;
 
-    // Cached pitch bases for applyLFOMod (see comment there)
-    float cachedBaseFreq   = 440.0f;
-    int   cachedBaseNote   = -9999;
-    float cachedBaseDetune = -9999.0f;
-    float cachedOsc2Base   = 440.0f;
-    int   cachedOsc2Note   = -9999;
-    int   cachedOsc2Oct    = -9999;
-    float cachedOsc2Fine   = -9999.0f;
+    // Pitch bend + LFO pitch, as a single multiplier applied in process().
+    float pitchModRatio  = 1.0f;
+    float cachedPitchMod = -9999.0f;
 };
