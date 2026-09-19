@@ -192,16 +192,8 @@ public:
         // Generate both oscillators and mix
         float sample = osc.process() + osc2.process();
 
-        // Filter envelope modulation, in OCTAVES rather than in Hz.
-        //
-        // It used to add `envAmount * env * 10000` Hz on top of the cutoff, so
-        // the same envelope setting produced a wildly different musical result
-        // depending on where the cutoff sat: +10 kHz is 5.7 octaves from 200 Hz
-        // but only 1.2 octaves from 8 kHz. Pitch and brightness are perceived
-        // logarithmically, so the sweep is now a constant interval.
-        constexpr float kEnvOctaves = 6.0f;
-        float cutoffMod = baseCutoff * std::exp2(filterEnvAmount * filterMod * kEnvOctaves)
-                          + lfoCutoffOffset;
+        // Apply filter with envelope modulation + LFO cutoff mod
+        float cutoffMod = baseCutoff + filterEnvAmount * filterMod * 10000.0f + lfoCutoffOffset;
         cutoffMod = std::clamp(cutoffMod, 20.0f, 20000.0f);
         filter.setCutoff(cutoffMod);
         sample = filter.process(sample);
