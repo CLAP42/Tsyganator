@@ -357,10 +357,16 @@ void TsyganatorProcessor::setPlayMode(PlayMode newMode)
 
 void TsyganatorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    // Flush denormals to zero for the whole callback. Filter state, chorus
+    // delay lines and envelope tails all decay toward zero, and denormal
+    // arithmetic costs orders of magnitude more CPU on x86.
+    juce::ScopedNoDenormals noDenormals;
+
     buffer.clear();
 
     int numSamples = buffer.getNumSamples();
     if (numSamples <= 0) return;
+    if (buffer.getNumChannels() <= 0) return;   // A host may hand us nothing
 
     updateVoiceParams();
     float* outL = buffer.getWritePointer(0);
@@ -521,6 +527,22 @@ void TsyganatorProcessor::renderSegment (float* outL, float* outR,
                                          int startSample, int numSamples,
                                          float unisonScale, float stereoSpread)
 {
+    // Equal-power pan gains depend only on the voice index and stereoSpread,
+    // both constant across this segment — but std::cos/std::sin were being
+    // evaluated per voice PER SAMPLE. Precomputed here; identical values.
+    float panGainL[NUM_VOICES], panGainR[NUM_VOICES];
+    const bool spreadActive = (stereoSpread > 0.001f && NUM_VOICES > 1);
+    if (spreadActive)
+    {
+        for (int vi = 0; vi < NUM_VOICES; ++vi)
+        {
+            float pan = (float)vi / (float)(NUM_VOICES - 1); // 0..1
+            pan = 0.5f + (pan - 0.5f) * stereoSpread;        // narrow around center
+            panGainL[vi] = std::cos(pan * 1.5707963f);
+            panGainR[vi] = std::sin(pan * 1.5707963f);
+        }
+    }
+
     for (int k = 0; k < numSamples; ++k)
     {
         const int i = startSample + k;
@@ -562,15 +584,10 @@ void TsyganatorProcessor::renderSegment (float* outL, float* outR,
                 float sample = v.process() * lfoVolMod;
 
                 // Stereo spread: pan each voice across the stereo field
-                if (stereoSpread > 0.001f && NUM_VOICES > 1)
+                if (spreadActive)
                 {
-                    // Voice 0 pans left, voice N-1 pans right
-                    float pan = (float)vi / (float)(NUM_VOICES - 1); // 0..1
-                    pan = 0.5f + (pan - 0.5f) * stereoSpread;       // narrow around center
-                    float gainL = std::cos(pan * 1.5707963f);        // equal-power pan
-                    float gainR = std::sin(pan * 1.5707963f);
-                    monoL += sample * gainL;
-                    monoR += sample * gainR;
+                    monoL += sample * panGainL[vi];
+                    monoR += sample * panGainR[vi];
                 }
                 else
                 {

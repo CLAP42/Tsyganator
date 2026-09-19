@@ -128,16 +128,38 @@ public:
         float totalPitchMod = pitchSemitones + pitchBendSemitones;
         if ((std::abs(totalPitchMod) > 0.001f || std::abs(totalDetune) > 0.01f) && currentNote >= 0)
         {
-            float baseFreq = 440.0f * std::pow(2.0f, (currentNote - 69) / 12.0f);
-            if (std::abs(totalDetune) > 0.01f)
-                baseFreq *= std::pow(2.0f, totalDetune / 1200.0f);
-            float modFreq = baseFreq * std::pow(2.0f, totalPitchMod / 12.0f);
-            osc.setFrequency(modFreq);
+            // This ran FOUR std::pow calls per sample per voice. Only the pitch
+            // modulation actually changes sample to sample: the note's base
+            // frequency and OSC2's offset are constant until the note or the
+            // tuning changes, so they are cached. Same arithmetic, same order,
+            // bit-identical result.
+            if (currentNote != cachedBaseNote || totalDetune != cachedBaseDetune)
+            {
+                cachedBaseFreq = 440.0f * std::pow(2.0f, (currentNote - 69) / 12.0f);
+                if (std::abs(totalDetune) > 0.01f)
+                    cachedBaseFreq *= std::pow(2.0f, totalDetune / 1200.0f);
+                cachedBaseNote   = currentNote;
+                cachedBaseDetune = totalDetune;
+                cachedOsc2Note   = -9999;      // force OSC2 base refresh
+            }
 
-            // OSC2 also gets pitch mod
-            float osc2Base = baseFreq * std::pow(2.0f, (float)osc2Octave) * std::pow(2.0f, osc2FineCents / 1200.0f);
-            float osc2Mod = osc2Base * std::pow(2.0f, totalPitchMod / 12.0f);
-            osc2.setFrequency(osc2Mod);
+            if (cachedOsc2Note != currentNote
+                || cachedOsc2Oct != osc2Octave
+                || cachedOsc2Fine != osc2FineCents)
+            {
+                cachedOsc2Base = cachedBaseFreq * std::pow(2.0f, (float)osc2Octave)
+                                                * std::pow(2.0f, osc2FineCents / 1200.0f);
+                cachedOsc2Note = currentNote;
+                cachedOsc2Oct  = osc2Octave;
+                cachedOsc2Fine = osc2FineCents;
+            }
+
+            // The one value that genuinely varies per sample, computed once and
+            // shared by both oscillators (it was evaluated twice before).
+            const float pitchRatio = std::pow(2.0f, totalPitchMod / 12.0f);
+
+            osc.setFrequency (cachedBaseFreq * pitchRatio);
+            osc2.setFrequency(cachedOsc2Base * pitchRatio);
         }
     }
 
@@ -249,4 +271,13 @@ private:
 
     // Voice-stealing age stamp (set by processor at each noteOn)
     uint64_t ageStamp = 0;
+
+    // Cached pitch bases for applyLFOMod (see comment there)
+    float cachedBaseFreq   = 440.0f;
+    int   cachedBaseNote   = -9999;
+    float cachedBaseDetune = -9999.0f;
+    float cachedOsc2Base   = 440.0f;
+    int   cachedOsc2Note   = -9999;
+    int   cachedOsc2Oct    = -9999;
+    float cachedOsc2Fine   = -9999.0f;
 };

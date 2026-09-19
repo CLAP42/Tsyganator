@@ -36,6 +36,17 @@ public:
     bool hasEditor() const override { return true; }
 
     const juce::String getName() const override { return "Tsyganator"; }
+    // Synth: no input bus, and we only ever render mono or stereo.
+    bool isBusesLayoutSupported (const BusesLayout& layouts) const override
+    {
+        if (layouts.getMainInputChannels() != 0)
+            return false;
+
+        const auto out = layouts.getMainOutputChannelSet();
+        return out == juce::AudioChannelSet::mono()
+            || out == juce::AudioChannelSet::stereo();
+    }
+
     bool acceptsMidi() const override { return true; }
     bool producesMidi() const override { return true; }
     double getTailLengthSeconds() const override { return 2.0; }

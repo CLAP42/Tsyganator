@@ -174,8 +174,18 @@ public:
 
             // Envelope follower (peak detection)
             float peak = std::max(std::abs(left), std::abs(right));
-            float attackCoeff  = std::exp(-1.0f / (float)(sampleRate * attack));
-            float releaseCoeff = std::exp(-1.0f / (float)(sampleRate * release));
+
+            // attack/release are constants, so these two std::exp calls only
+            // ever depend on the sample rate — they were being evaluated on
+            // every sample. Cached; identical values, no per-sample exp.
+            if (sampleRate != compCachedSampleRate)
+            {
+                compAttackCoeff     = std::exp(-1.0f / (float)(sampleRate * attack));
+                compReleaseCoeff    = std::exp(-1.0f / (float)(sampleRate * release));
+                compCachedSampleRate = sampleRate;
+            }
+            const float attackCoeff  = compAttackCoeff;
+            const float releaseCoeff = compReleaseCoeff;
 
             if (peak > compEnvelope)
                 compEnvelope = attackCoeff * compEnvelope + (1.0f - attackCoeff) * peak;
@@ -312,6 +322,9 @@ private:
 
     // === Compressor state ===
     float compEnvelope = 0.0f;
+    float  compAttackCoeff = 0.0f;
+    float  compReleaseCoeff = 0.0f;
+    double compCachedSampleRate = -1.0;
 
     // === P38: Saturator pre/de-emphasis + DC blocker state ===
     BiquadCoeffs preEmphCoeffs;   // +6 dB high-shelf @ ~3 kHz (into saturator)

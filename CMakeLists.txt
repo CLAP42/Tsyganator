@@ -69,7 +69,9 @@ juce_add_plugin(Tsyganator
     PRODUCT_NAME            "Tsyganator"
     IS_SYNTH                TRUE
     NEEDS_MIDI_INPUT        TRUE
-    NEEDS_MIDI_OUTPUT       FALSE
+    # producesMidi() returns true and the sequencer/arp write note events
+    # into the output buffer, so the host must be told to wire a MIDI out.
+    NEEDS_MIDI_OUTPUT       TRUE
     IS_MIDI_EFFECT          FALSE
     # Always FALSE: user copies the built artefacts manually.
     #   macOS    → build/Tsyganator_artefacts/Release/{VST3,AU,Standalone}/

@@ -29,12 +29,26 @@ public:
 
     float process(float input)
     {
-        // Clamp cutoff to stay well below Nyquist (tan approaches infinity at pi/2)
-        // Use 0.45 to be safe even at very low sample rates (22050 Hz)
-        float safeCutoff = std::min(cutoff, (float)(sampleRate * 0.45));
+        // The warped coefficient depends only on cutoff and sample rate, but
+        // std::tan was being evaluated on EVERY sample. Recompute it only when
+        // one of those actually changes — bit-identical, far cheaper whenever
+        // the cutoff is not being swept.
+        if (cutoff != cachedCutoff || sampleRate != cachedSampleRate)
+        {
+            // Clamp cutoff to stay well below Nyquist (tan approaches infinity at pi/2)
+            // Use 0.45 to be safe even at very low sample rates (22050 Hz)
+            float safeCutoff = std::min(cutoff, (float)(sampleRate * 0.45));
 
-        // Frequency warping for accurate cutoff at high frequencies
-        float wc = 2.0f * std::tan(3.14159265f * safeCutoff / (float)sampleRate);
+            // Frequency warping for accurate cutoff at high frequencies
+            float wc = 2.0f * std::tan(3.14159265f * safeCutoff / (float)sampleRate);
+
+            // Guard against NaN from extreme wc values
+            if (!std::isfinite(wc) || wc < 0.0f) wc = 0.01f;
+
+            cachedG          = wc / (1.0f + wc);
+            cachedCutoff     = cutoff;
+            cachedSampleRate = sampleRate;
+        }
 
         // Feedback amount (resonance)
         float fb = resonance * 4.0f; // 0-4 range for self-oscillation at max
@@ -46,11 +60,8 @@ public:
         // Soft clipping on input (analog-style saturation)
         in = std::tanh(in);
 
-        // Guard against NaN from extreme wc values
-        if (!std::isfinite(wc) || wc < 0.0f) wc = 0.01f;
-
         // Four cascaded one-pole filters
-        float g = wc / (1.0f + wc);
+        const float g = cachedG;
 
         float v1 = g * (in - s1);
         float lp1 = v1 + s1;
@@ -88,4 +99,9 @@ private:
 
     // Filter state (4 poles)
     float s1 = 0.0f, s2 = 0.0f, s3 = 0.0f, s4 = 0.0f;
+
+    // Cached warped coefficient (see process())
+    float  cachedG = 0.0f;
+    float  cachedCutoff = -1.0f;
+    double cachedSampleRate = -1.0;
 };

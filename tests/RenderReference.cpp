@@ -450,6 +450,26 @@ int main (int argc, char* argv[])
         return 0;
     }
 
+    if (args[0] == "--bench")
+    {
+        // Pure DSP timing: render every scenario N times, write nothing.
+        const int reps = args.size() > 1 ? juce::jmax (1, args[1].getIntValue()) : 10;
+        const double t0 = juce::Time::getMillisecondCounterHiRes();
+        double audioSeconds = 0.0;
+        for (int r = 0; r < reps; ++r)
+            for (auto& sc : scenarios)
+            {
+                auto b = renderScenario (sc);
+                audioSeconds += sc.seconds;
+                juce::ignoreUnused (b);
+            }
+        const double ms = juce::Time::getMillisecondCounterHiRes() - t0;
+        std::cout << juce::String (ms, 1) << " ms for "
+                  << juce::String (audioSeconds, 1) << " s of audio  ("
+                  << juce::String (audioSeconds * 1000.0 / ms, 1) << "x realtime)\n";
+        return 0;
+    }
+
     if (args[0] == "--compare")
     {
         if (args.size() < 3) { std::cerr << "--compare needs two files\n"; return 2; }
