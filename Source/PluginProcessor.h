@@ -51,7 +51,7 @@ public:
     bool producesMidi() const override { return true; }
     double getTailLengthSeconds() const override { return 2.0; }
 
-    int getNumPrograms() override { return (int)currentModePresets.size(); }
+    int getNumPrograms() override { return (int)currentPresets().size(); }
     int getCurrentProgram() override { return currentPreset; }
     void setCurrentProgram(int index) override;
     const juce::String getProgramName(int index) override;
@@ -122,8 +122,8 @@ public:
 
     // Personality mode switching (Belgian / Italian)
     void setMode(SynthMode newMode);
-    SynthMode getMode() const { return currentMode; }
-    const std::vector<TsyganatorPreset>& getCurrentPresets() const { return currentModePresets; }
+    SynthMode getMode() const { return currentMode.load(std::memory_order_acquire); }
+    const std::vector<TsyganatorPreset>& getCurrentPresets() const { return currentPresets(); }
     void loadPreset(int index);
 
     // Play mode (Off / ARP / SEQ SYNTH / SEQ SAMPLE)
@@ -191,8 +191,21 @@ private:
 
     std::unique_ptr<PresetManager> presetManager;
 
-    SynthMode currentMode = ItalianMode;
-    std::vector<TsyganatorPreset> currentModePresets;
+    // Both banks are built once and never reallocated. They used to live in a
+    // single std::vector that setMode() and setStateInformation() REASSIGNED,
+    // while getNumPrograms()/getProgramName()/loadPreset() indexed it from
+    // other threads — a host calling those while restoring state on a
+    // background thread could read the vector mid-reallocation. pluginval's
+    // "Background thread state" test crashed on exactly that, intermittently.
+    const std::vector<TsyganatorPreset> belgianPresets = getBelgianPresets();
+    const std::vector<TsyganatorPreset> italianPresets = getItalianPresets();
+    std::atomic<SynthMode> currentMode { ItalianMode };
+
+    const std::vector<TsyganatorPreset>& currentPresets() const
+    {
+        return currentMode.load(std::memory_order_acquire) == BelgianMode
+                 ? belgianPresets : italianPresets;
+    }
     int currentPreset = 0;
     std::vector<ModeListener*> modeListeners;
 

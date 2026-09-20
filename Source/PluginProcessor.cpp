@@ -19,7 +19,6 @@ TsyganatorProcessor::TsyganatorProcessor()
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
-    currentModePresets = getItalianPresets();
 
     // Sequencer callbacks — route to synth or sample depending on mode
     // 303-style: apply keyboard transpose offset to sequencer notes
@@ -1084,20 +1083,19 @@ void TsyganatorProcessor::tsyganize()
 
 void TsyganatorProcessor::setMode(SynthMode newMode)
 {
-    if (newMode == currentMode) return;
-    currentMode = newMode;
-    currentModePresets = (currentMode == BelgianMode) ? getBelgianPresets() : getItalianPresets();
+    if (newMode == currentMode.load(std::memory_order_acquire)) return;
+    currentMode.store(newMode, std::memory_order_release);
     loadPreset(0);
 
     for (auto* l : modeListeners)
-        l->modeChanged(currentMode);
+        l->modeChanged(getMode());
 }
 
 void TsyganatorProcessor::loadPreset(int index)
 {
-    if (index < 0 || index >= (int)currentModePresets.size()) return;
+    if (index < 0 || index >= (int)currentPresets().size()) return;
     currentPreset = index;
-    const auto& p = currentModePresets[(size_t)index];
+    const auto& p = currentPresets()[(size_t)index];
 
     // RT-safe parameter setter: uses APVTS's atomic path with proper host notification.
     // Safe to call from message thread OR audio thread (e.g. host program change automation).
@@ -1161,8 +1159,8 @@ void TsyganatorProcessor::setCurrentProgram(int index) { loadPreset(index); }
 
 const juce::String TsyganatorProcessor::getProgramName(int index)
 {
-    if (index >= 0 && index < (int)currentModePresets.size())
-        return juce::String(currentModePresets[(size_t)index].name);
+    if (index >= 0 && index < (int)currentPresets().size())
+        return juce::String(currentPresets()[(size_t)index].name);
     return {};
 }
 
@@ -1174,7 +1172,7 @@ juce::AudioProcessorEditor* TsyganatorProcessor::createEditor()
 void TsyganatorProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
-    state.setProperty("synthModeValue", (int)currentMode, nullptr);
+    state.setProperty("synthModeValue", (int)getMode(), nullptr);
     state.setProperty("playModeValue", (int)playMode, nullptr);
     state.setProperty("arpMode", (int)arpeggiator.getMode(), nullptr);
     state.setProperty("currentPresetIndex", currentPreset, nullptr);
@@ -1211,12 +1209,13 @@ void TsyganatorProcessor::setStateInformation(const void* data, int sizeInBytes)
 
         // Restore mode WITHOUT calling loadPreset(0) — parameters are already restored by replaceState
         int modeVal = apvts.state.getProperty("synthModeValue", 0);
-        currentMode = static_cast<SynthMode>(std::clamp(modeVal, 0, 1));
-        currentModePresets = (currentMode == BelgianMode) ? getBelgianPresets() : getItalianPresets();
+        currentMode.store(static_cast<SynthMode>(std::clamp(modeVal, 0, 1)), std::memory_order_release);
         currentPreset = (int)apvts.state.getProperty("currentPresetIndex", 0);
-        // Notify mode listeners
-        for (auto* l : modeListeners)
-            l->modeChanged(currentMode);
+        // Deliberately NOT notifying mode listeners here. setStateInformation
+        // is called on whatever thread the host chooses, and modeChanged() ends
+        // up in TsyganatorEditor::syncMode(), which touches Components — that is
+        // message-thread-only work. The editor polls getMode() in its timer
+        // instead, so it picks the change up within one tick.
 
         int pmVal = apvts.state.getProperty("playModeValue", 0);
         playMode = static_cast<PlayMode>(std::clamp(pmVal, 0, 3));

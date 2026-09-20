@@ -425,6 +425,10 @@ private:
     void layoutRow4();
 
     void syncMode();
+    // Polled in timerCallback: setStateInformation can change the mode from a
+    // non-message thread, so the editor detects it here rather than being
+    // called back on the host's thread.
+    TsyganatorProcessor::SynthMode lastSeenMode = TsyganatorProcessor::ItalianMode;
     void updateMasterDbLabel();
 
     // ========== Button Callbacks ==========

@@ -2741,6 +2741,7 @@ void TsyganatorEditor::layoutRow4()
 
 void TsyganatorEditor::modeChanged(TsyganatorProcessor::SynthMode newMode)
 {
+    lastSeenMode = newMode;
     syncMode();
 }
 
@@ -2850,6 +2851,15 @@ void TsyganatorEditor::updateMasterDbLabel()
 
 void TsyganatorEditor::timerCallback()
 {
+    // Pick up a mode change that arrived through setStateInformation on the
+    // host's thread (see the note there).
+    if (processor.getMode() != lastSeenMode)
+    {
+        lastSeenMode = processor.getMode();
+        syncMode();
+        repaint();
+    }
+
     // Update playhead (repaint sequencer area if changed)
     auto& seq = processor.getSequencer();
     int currentStep = seq.getCurrentStep();
