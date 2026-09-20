@@ -970,8 +970,8 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
 
     // ========== Filter Section ==========
     setupKnob(cutoffSlider, cutoffLabel, cutoffAttach, "cutoff", "Cutoff");
-    setupKnob(resonanceSlider, resonanceLabel, resonanceAttach, "resonance", "Reso");
-    setupKnob(filterEnvAmountSlider, filterEnvAmountLabel, filterEnvAmountAttach, "filterEnvAmount", "Env Amt");
+    setupKnob(resonanceSlider, resonanceLabel, resonanceAttach, "resonance", "Resonance");
+    setupKnob(filterEnvAmountSlider, filterEnvAmountLabel, filterEnvAmountAttach, "filterEnvAmount", "Env Amount");
 
     filterLabel.setText("Filter", juce::dontSendNotification);
     filterLabel.setJustificationType(juce::Justification::centred);
@@ -1020,7 +1020,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     unisonModeLabel.setBounds(-100, -100, 1, 1);  // hidden (label baked in BG)
 
     setupKnob(unisonDetuneSlider, unisonDetuneLabel, unisonDetuneAttach, "unisonDetune", "Detune");
-    setupKnob(keyTrackingSlider, keyTrackingLabel, keyTrackingAttach, "keyTracking", "Key Trk");
+    setupKnob(keyTrackingSlider, keyTrackingLabel, keyTrackingAttach, "keyTracking", "Key Track");
     setupKnob(portamentoSlider, portamentoLabel, portamentoAttach, "portamento", "Glide");
 
     performanceLabel.setText("Performance", juce::dontSendNotification);
@@ -1068,7 +1068,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     addAndMakeVisible(lfoWaveformCombo);
     lfoWaveformAttach = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         processor.apvts, "lfoWaveform", lfoWaveformCombo);
-    lfoWaveformLabel.setText("Wave", juce::dontSendNotification);
+    lfoWaveformLabel.setText("Waveform", juce::dontSendNotification);
     lfoWaveformLabel.setJustificationType(juce::Justification::centred);
     styleLabel(lfoWaveformLabel);
     addAndMakeVisible(lfoWaveformLabel);
@@ -1083,7 +1083,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     addAndMakeVisible(lfoDestinationCombo);
     lfoDestinationAttach = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         processor.apvts, "lfoDestination", lfoDestinationCombo);
-    lfoDestinationLabel.setText("Dest", juce::dontSendNotification);
+    lfoDestinationLabel.setText("Destination", juce::dontSendNotification);
     lfoDestinationLabel.setJustificationType(juce::Justification::centred);
     styleLabel(lfoDestinationLabel);
     addAndMakeVisible(lfoDestinationLabel);
@@ -1211,6 +1211,20 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
 
     sequencerLabel.setText("Steps", juce::dontSendNotification);
     sequencerLabel.setJustificationType(juce::Justification::centred);
+    for (auto* pair : { &seqPlayModeLabel, &seqNoteLabel, &seqVelLabel, &seqPatternLabel })
+    {
+        pair->setJustificationType(juce::Justification::centred);
+        styleLabel(*pair);
+        addAndMakeVisible(*pair);
+    }
+    seqPlayModeLabel.setText("Play Mode",   juce::dontSendNotification);
+    seqNoteLabel.setText    ("Note",        juce::dontSendNotification);
+    seqVelLabel.setText     ("Velocity",    juce::dontSendNotification);
+    seqPatternLabel.setText ("Pattern",     juce::dontSendNotification);
+    arpLabel.setText        ("Arpeggiator", juce::dontSendNotification);
+    arpLabel.setJustificationType(juce::Justification::centred);
+    styleLabel(arpLabel);
+    addAndMakeVisible(arpLabel);
     styleLabel(sequencerLabel);  // Same font as Swing/Gate labels
     addAndMakeVisible(sequencerLabel);
 
@@ -1239,7 +1253,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     addAndMakeVisible(seqPatternCombo);
 
     // Sequencer action buttons
-    seqRandButton.setButtonText("Rand");
+    seqRandButton.setButtonText("Random");
     seqRandButton.onClick = [this]() {
         processor.getSequencer().randomizePattern();
         actionFlash = 1.0f; actionFlashBtn = &seqRandButton;
@@ -1247,7 +1261,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     };
     addAndMakeVisible(seqRandButton);
 
-    seqClearButton.setButtonText("Clr");
+    seqClearButton.setButtonText("Clear");
     seqClearButton.onClick = [this]() {
         processor.getSequencer().clearPattern();
         actionFlash = 1.0f; actionFlashBtn = &seqClearButton;
@@ -1285,7 +1299,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     };
     addAndMakeVisible(seqAccentButton);
 
-    seqNotePlusButton.setButtonText("N+");
+    seqNotePlusButton.setButtonText(juce::String::fromUTF8("\xe2\x96\xb2"));
     seqNotePlusButton.onClick = [this]() {
         auto& seq = processor.getSequencer();
         int step = selectedStep;
@@ -1300,7 +1314,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     };
     addAndMakeVisible(seqNotePlusButton);
 
-    seqNoteMinusButton.setButtonText("N-");
+    seqNoteMinusButton.setButtonText(juce::String::fromUTF8("\xe2\x96\xbc"));
     seqNoteMinusButton.onClick = [this]() {
         auto& seq = processor.getSequencer();
         int step = selectedStep;
@@ -1315,7 +1329,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     };
     addAndMakeVisible(seqNoteMinusButton);
 
-    seqVelPlusButton.setButtonText("V+");
+    seqVelPlusButton.setButtonText(juce::String::fromUTF8("\xe2\x96\xb2"));
     seqVelPlusButton.onClick = [this]() {
         auto& seq = processor.getSequencer();
         int step = selectedStep;
@@ -1330,7 +1344,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     };
     addAndMakeVisible(seqVelPlusButton);
 
-    seqVelMinusButton.setButtonText("V-");
+    seqVelMinusButton.setButtonText(juce::String::fromUTF8("\xe2\x96\xbc"));
     seqVelMinusButton.onClick = [this]() {
         auto& seq = processor.getSequencer();
         int step = selectedStep;
@@ -1423,7 +1437,6 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     addAndMakeVisible(arpRateCombo);
     arpRateAttach = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         processor.apvts, "arpRate", arpRateCombo);
-    arpLabel.setText("Arp Rate", juce::dontSendNotification);
     arpLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(arpLabel);
 
@@ -2496,11 +2509,11 @@ void TsyganatorEditor::layoutRow1()
     // Vertically center knob+label (74px) in usable panel area (96-230 = 134px)
     int fkY = Grid::row1Y + 16 + (134 - (filterKnobSize + 16)) / 2;  // knob+gap+label centered in panel
     cutoffSlider.setBounds(filterX, fkY, filterKnobSize, filterKnobSize);
-    cutoffLabel.setBounds(filterX, fkY + filterKnobSize + 2, filterKnobSize, 14);
+    cutoffLabel.setBounds(filterX - 5, fkY + filterKnobSize + 2, filterKnobSize + 10, 14);
     resonanceSlider.setBounds(filterX + filterKnobSpacing, fkY, filterKnobSize, filterKnobSize);
-    resonanceLabel.setBounds(filterX + filterKnobSpacing, fkY + filterKnobSize + 2, filterKnobSize, 14);
+    resonanceLabel.setBounds(filterX + filterKnobSpacing - 5, fkY + filterKnobSize + 2, filterKnobSize + 10, 14);
     filterEnvAmountSlider.setBounds(filterX + filterKnobSpacing * 2, fkY, filterKnobSize, filterKnobSize);
-    filterEnvAmountLabel.setBounds(filterX + filterKnobSpacing * 2, fkY + filterKnobSize + 2, filterKnobSize, 14);
+    filterEnvAmountLabel.setBounds(filterX + filterKnobSpacing * 2 - 6, fkY + filterKnobSize + 2, filterKnobSize + 12, 14);
 
     // Filter ADSR (4 faders centered in 210px card body at x=884..1094)
     // P33: filterAdsrX 917 → 919 for symmetric margins
@@ -2588,10 +2601,10 @@ void TsyganatorEditor::layoutRow2()
         // col 2: Sync button (top) + Wave combo (bottom) — stacked
         lfoSyncButton.setBounds   (col(2), y + 2,  slotW, 24);
         lfoWaveformCombo.setBounds(col(2), y + 32, slotW, 22);
-        lfoWaveformLabel.setBounds(col(2), y + 56, slotW, 14);
+        lfoWaveformLabel.setBounds(col(2) - 6, y + 56, slotW + 12, 14);
         // col 3: Dest combo (bottom half only, top deliberately empty)
         lfoDestinationCombo.setBounds(col(3), y + 32, slotW, 22);
-        lfoDestinationLabel.setBounds(col(3), y + 56, slotW, 14);
+        lfoDestinationLabel.setBounds(col(3) - 8, y + 56, slotW + 16, 14);
     }
 
     // -------- VINTAGE card (x=672..862, w=190) — P44 split from EFFECTS --------
@@ -2610,11 +2623,15 @@ void TsyganatorEditor::layoutRow2()
     // 4 toggles × 36 + 3 gaps × 8 = 168 cluster. Card-centred at chorusX=898.
     // Toggle centre y=286 to match knob centres across Row 2.
     {
-        const int toggleW = 36, toggleH = 36, toggleGap = 8;
+        // Matched to the neighbouring knobs' height so the card no longer has
+        // an empty lower half, and derived from y rather than hard-coded: the
+        // old literal 268 stopped tracking the row after the vertical rhythm
+        // changed, leaving these 12 px above the knob centres.
+        const int toggleW = 44, toggleH = 56, toggleGap = 8;
         const int chorusCardX = Grid::x(8), chorusCardW = Grid::w(2);
         const int totalChorusW = toggleW * 4 + toggleGap * 3;
         const int chorusX = chorusCardX + (chorusCardW - totalChorusW) / 2;
-        const int toggleY = 268;
+        const int toggleY = y + (h - toggleH) / 2;
         chorusOffBtn.setBounds    (chorusX,                                 toggleY, toggleW, toggleH);
         chorusIBtn.setBounds      (chorusX + (toggleW + toggleGap) * 1,     toggleY, toggleW, toggleH);
         chorusIIBtn.setBounds     (chorusX + (toggleW + toggleGap) * 2,     toggleY, toggleW, toggleH);
@@ -2653,69 +2670,69 @@ void TsyganatorEditor::layoutRow2()
 
 void TsyganatorEditor::layoutRow3()
 {
-    // ROW3: Y=342, H=82 (bottom=424). Section title ~342-358 (16px).
-    // Usable area: 360-420 = 60px. Center 32px buttons → y = 360 + (60-32)/2 = 374.
-    // Inside the merged SEQUENCER card: header 342-358, controls 366-398,
-    // captions 400-411, LEDs 415, grid 424-540, 14 px bottom margin.
-    int y = Grid::row3Y + 24;
-    int h = 32;
+    // Control strip of the merged SEQUENCER card.
+    //
+    // It used to end at x=1018 inside a card running to 1346 — 328 px of dead
+    // space on the right. Controls are now chunkier and spread across the full
+    // width in eight groups separated by an even 16 px, with a full word
+    // underneath each group instead of "Clr", "N+", "V-".
+    const int y  = Grid::row3Y + 24;
+    const int h  = 32;
+    const int cy = y + h + 2;          // caption baseline, shared by every group
+    const int cH = 11;
 
-    // Play mode buttons — within PLAY MODE panel (x=14, w=374, right edge=388).
-    // 4 buttons + 2 combos. Cluster span: 0..366 relative to pmX → 366 wide.
-    // P33: pmX 22 → 18 so left + right margins are symmetric at 4 px each
-    // (the old +22 made the rightmost combo touch the card's right edge).
-    const int pmX = 18;
-    playOffButton.setBounds      (pmX,         y, 44, h);
-    playArpButton.setBounds      (pmX +  48,   y, 44, h);
-    playSeqSynthButton.setBounds (pmX +  96,   y, 70, h);
+    auto caption = [&](juce::Label& l, int x, int w) { l.setBounds(x, cy, w, cH); };
 
-    // Arp combos — placed at right edge of the panel.
-    // arpRateCombo = note value (1/4, 1/8, ...), arpModeCombo = pattern (Up/Down/...).
-    arpLabel.setBounds    (-100, -100, 1, 1);  // not displayed (PLAY MODE label is in bg PNG)
-    arpModeLabel.setBounds(-100, -100, 1, 1);  // ditto
-    arpRateCombo.setBounds(pmX + 252, y + 2, 50, 28);
-    arpModeCombo.setBounds(pmX + 306, y + 2, 60, 28);
+    // A — play mode -------------------------------------------------------
+    playOffButton.setBounds     ( 24, y, 56, h);
+    playArpButton.setBounds     ( 86, y, 56, h);
+    playSeqSynthButton.setBounds(148, y, 88, h);
+    caption(seqPlayModeLabel, 24, 212);
 
-    // Sequencer controls — within SEQUENCER card (x=396..1022, w=626).
-    // P33: cluster shifted right by +2 — components used to span 398..1016
-    // (left=2, right=6, asym) — now 400..1018 (left=4, right=4, ✓ symmetric).
-    // Step count: minus / numeric display / plus (no slider)
-    stepMinusButton.setBounds(400, y, 28, h);
-    seqNumStepsLabel.setBounds(428, y, 34, h);
-    stepPlusButton.setBounds(462, y, 28, h);
-    sequencerLabel.setText("Steps", juce::dontSendNotification);
-    sequencerLabel.setBounds(400, y + h + 2, 90, 11);
+    // B — arpeggiator. The rate combo was 50 px and showed "..." because
+    //     "1/16" plus the arrow did not fit.
+    arpRateCombo.setBounds(252, y + 2, 66, 28);
+    arpModeCombo.setBounds(324, y + 2, 76, 28);
+    caption(arpLabel, 252, 148);
+    arpModeLabel.setBounds(-100, -100, 1, 1);
+    arpRateLabel.setBounds(-100, -100, 1, 1);
 
-    // Swing & Gate knobs — square bounds to avoid arc overflow.
-    int knobSz = h;
-    // The Swing/Gate captions used to sit at knobY + knobSz + 10 = 414 and are
-    // 11 px tall, so they ended at 425 — one pixel PAST the card's bottom edge
-    // (342 + 82 = 424) — and 6 px lower than the "Steps" caption beside them.
-    // Knobs pulled up 2 px and slimmed by 2 px so both captions can share the
-    // same baseline as "Steps" with 5 px of clearance inside the card.
-    int knobY = y - 4;
-    seqSwingSlider.setBounds(500, knobY, knobSz + 4, knobSz + 4);
-    seqSwingLabel.setBounds(498, y + h + 2, knobSz + 10, 11);
-    seqGateLengthSlider.setBounds(552, knobY, knobSz + 4, knobSz + 4);
-    seqGateLengthLabel.setBounds(550, y + h + 2, knobSz + 10, 11);
+    // C — step count ------------------------------------------------------
+    stepMinusButton.setBounds  (416, y, 34, h);
+    seqNumStepsLabel.setBounds (450, y, 40, h);
+    stepPlusButton.setBounds   (490, y, 34, h);
+    caption(sequencerLabel, 416, 108);
 
-    // Action buttons
-    seqRandButton.setBounds(604, y, 44, h);
-    seqClearButton.setBounds(652, y, 44, h);
-    seqGlideButton.setBounds(700, y, 52, h);
-    seqAccentButton.setBounds(756, y, 56, h);
+    // D — swing / gate ----------------------------------------------------
+    const int knobSz = 40;
+    const int knobY  = y - 4;
+    seqSwingSlider.setBounds     (540, knobY, knobSz, knobSz);
+    seqGateLengthSlider.setBounds(596, knobY, knobSz, knobSz);
+    caption(seqSwingLabel,      534, 52);
+    caption(seqGateLengthLabel, 590, 52);
 
-    // Stack N+/N- and V+/V- vertically
-    int stackH = (h - 2) / 2;
-    seqNotePlusButton.setBounds(818, y, 36, stackH);
-    seqNoteMinusButton.setBounds(818, y + stackH + 2, 36, stackH);
-    seqVelPlusButton.setBounds(858, y, 36, stackH);
-    seqVelMinusButton.setBounds(858, y + stackH + 2, 36, stackH);
+    // E — pattern actions -------------------------------------------------
+    seqRandButton.setBounds (656, y, 96, h);
+    seqClearButton.setBounds(760, y, 80, h);
 
-    // Pattern preset selector
-    seqPatternCombo.setBounds(900, y + 2, 118, 24);
+    // F — step flags ------------------------------------------------------
+    seqGlideButton.setBounds (856, y, 76, h);
+    seqAccentButton.setBounds(940, y, 84, h);
 
+    // G — nudge the selected step ----------------------------------------
+    const int stackH = (h - 2) / 2;
+    seqNotePlusButton.setBounds (1040, y,               52, stackH);
+    seqNoteMinusButton.setBounds(1040, y + stackH + 2,  52, stackH);
+    seqVelPlusButton.setBounds  (1100, y,               52, stackH);
+    seqVelMinusButton.setBounds (1100, y + stackH + 2,  52, stackH);
+    caption(seqNoteLabel, 1040, 52);
+    caption(seqVelLabel,  1100, 52);
+
+    // H — pattern bank ----------------------------------------------------
+    seqPatternCombo.setBounds(1168, y + 2, 168, 28);
+    caption(seqPatternLabel, 1168, 168);
 }
+
 
 void TsyganatorEditor::layoutRow4()
 {

@@ -342,6 +342,10 @@ private:
 
     // ========== Sequencer Section ==========
     juce::Label sequencerLabel;
+    juce::Label seqPlayModeLabel;
+    juce::Label seqNoteLabel;
+    juce::Label seqVelLabel;
+    juce::Label seqPatternLabel;
 
     juce::Slider seqNumStepsSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> seqNumStepsAttach;
