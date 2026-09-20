@@ -6,7 +6,6 @@
 #include "DSP/JunoPresets.h"
 #include "DSP/StepSequencer.h"
 #include "DSP/Arpeggiator.h"
-#include "DSP/SamplePlayer.h"
 #include "DSP/VintageProcessor.h"
 #include "PresetManager.h"
 #include <random>
@@ -23,7 +22,11 @@ class TsyganatorProcessor : public juce::AudioProcessor
 {
 public:
     enum SynthMode { BelgianMode = 0, ItalianMode = 1 };
-    enum PlayMode  { ModeOff = 0, ModeArp = 1, ModeSeqSynth = 2, ModeSeqSample = 3 };
+    // ModeSeqSample (3) was removed: it only ever called samplePlayer.trigger(vel)
+    // and never passed the step's note, so the whole programmed melody was
+    // ignored — it was a one-shot rhythm trigger occupying a full UI panel.
+    // Sessions saved with mode 3 are migrated to ModeSeqSynth on load.
+    enum PlayMode  { ModeOff = 0, ModeArp = 1, ModeSeqSynth = 2 };
 
     TsyganatorProcessor();
     ~TsyganatorProcessor() override = default;
@@ -131,7 +134,7 @@ public:
     PlayMode getPlayMode() const { return playMode; }
 
     // Convenience queries for editor
-    bool isSequencerActive() const { return playMode == ModeSeqSynth || playMode == ModeSeqSample; }
+    bool isSequencerActive() const { return playMode == ModeSeqSynth; }
     bool isArpActive() const { return playMode == ModeArp; }
 
     // Sequencer access
@@ -143,9 +146,6 @@ public:
     Arpeggiator& getArpeggiator() { return arpeggiator; }
 
     // Sample player access
-    SamplePlayer& getSamplePlayer() { return samplePlayer; }
-    bool loadSampleFile(const juce::File& file) { return samplePlayer.loadFile(file); }
-    void clearSample() { samplePlayer.clearSample(); }
 
     // Tsyganize — randomize modulation parameters for unique sound
     void tsyganize();
@@ -187,7 +187,6 @@ private:
     JunoLFO lfo;
     StepSequencer sequencer;
     Arpeggiator arpeggiator;
-    SamplePlayer samplePlayer;
     VintageProcessor vintage;
     PlayMode playMode = ModeOff;
 

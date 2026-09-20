@@ -1421,7 +1421,6 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
             playOffButton.setToggleState(false, juce::dontSendNotification);
             playArpButton.setToggleState(false, juce::dontSendNotification);
             playSeqSynthButton.setToggleState(false, juce::dontSendNotification);
-            playSeqSampleButton.setToggleState(false, juce::dontSendNotification);
             btn.setToggleState(true, juce::dontSendNotification);
             processor.setPlayMode(mode);
             repaint();  // Immediately update section dimming
@@ -1431,7 +1430,6 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     setupPlayModeBtn(playOffButton, "Off", TsyganatorProcessor::ModeOff);
     setupPlayModeBtn(playArpButton, "Arp", TsyganatorProcessor::ModeArp);
     setupPlayModeBtn(playSeqSynthButton, "Seq Synth", TsyganatorProcessor::ModeSeqSynth);
-    setupPlayModeBtn(playSeqSampleButton, "Seq Sample", TsyganatorProcessor::ModeSeqSample);
 
     // ========== Additional Buttons ==========
 
@@ -1489,36 +1487,6 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     };
     addAndMakeVisible(saveButton);
 
-    loadSampleButton.setButtonText("Load Sample");
-    loadSampleButton.onClick = [this]() {
-        // P1-3: restrict to formats actually supported by registerBasicFormats()
-        // (WAV/AIFF). Previously listed MP3/FLAC silently failed at load time.
-        fileChooser = std::make_unique<juce::FileChooser>(
-            "Load Sample",
-            juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
-            "*.wav;*.aif;*.aiff");
-        fileChooser->launchAsync(juce::FileBrowserComponent::openMode,
-            [this](const juce::FileChooser& fc)
-            {
-                auto result = fc.getResult();
-                if (result.existsAsFile())
-                {
-                    bool ok = processor.loadSampleFile(result);
-                    if (!ok)
-                    {
-                        // Tell the user instead of failing silently
-                        juce::AlertWindow::showAsync(
-                            juce::MessageBoxOptions()
-                                .withIconType(juce::MessageBoxIconType::WarningIcon)
-                                .withTitle("Tsyganator")
-                                .withMessage("Could not load sample. Only WAV and AIFF are supported.")
-                                .withButton("OK"),
-                            nullptr);
-                    }
-                }
-            });
-    };
-    addAndMakeVisible(loadSampleButton);
 
     // unisonButton is a visible toggle button positioned in layoutRow2
 
@@ -1572,7 +1540,6 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
         playOffButton.setToggleState(pm == TsyganatorProcessor::ModeOff, juce::dontSendNotification);
         playArpButton.setToggleState(pm == TsyganatorProcessor::ModeArp, juce::dontSendNotification);
         playSeqSynthButton.setToggleState(pm == TsyganatorProcessor::ModeSeqSynth, juce::dontSendNotification);
-        playSeqSampleButton.setToggleState(pm == TsyganatorProcessor::ModeSeqSample, juce::dontSendNotification);
 
         // Chorus toggles from APVTS
         int chorusIdx = (int)processor.apvts.getRawParameterValue("chorusMode")->load();
@@ -1595,11 +1562,9 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     unisonButton.setTooltip("Unison: stacks all 6 voices on a single note with detuning for thickness. Costs polyphony.");
     vintageButton.setTooltip("Vintage: multi-stage saturation + vintage EQ + bass-mono + soft-knee glue. The post-synth polish chain.");
     lfoSyncButton.setTooltip("LFO Free vs tempo-synced to the host. Synced exposes musical divisions.");
-    loadSampleButton.setTooltip("Load a WAV or AIFF sample for the 'Seq Sample' play mode.");
     playOffButton.setTooltip("Off: classic polyphonic keyboard play.");
     playArpButton.setTooltip("Arp: held notes are arpeggiated using the chosen Rate and Mode.");
     playSeqSynthButton.setTooltip("Seq Synth: the step sequencer drives the synth. Keyboard becomes a 303-style transpose.");
-    playSeqSampleButton.setTooltip("Seq Sample: the step sequencer triggers the loaded sample. Keyboard still plays the synth.");
     seqRandButton.setTooltip("Randomize the step sequencer pattern using musical scales.");
     seqClearButton.setTooltip("Clear the entire step sequencer pattern.");
     seqGlideButton.setTooltip("Toggle glide on the selected step (legato into the next note).");
@@ -1879,7 +1844,6 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     // Row 3 (y=342, h=82) — play mode / sequencer controls / sample
     drawCard({  14.0f, 342.0f, 374.0f,  82.0f }, "PLAY MODE");
     drawCard({ 396.0f, 342.0f, 626.0f,  82.0f }, "SEQUENCER");
-    drawCard({1030.0f, 342.0f, 316.0f,  82.0f }, "SAMPLE");
 
     // Row 4 (y=428, h=126) — step sequencer grid
     drawCard({  14.0f, 428.0f, 1332.0f, 126.0f }, "STEP SEQUENCER");
@@ -2312,17 +2276,6 @@ void TsyganatorEditor::paint(juce::Graphics& g)
         }
     }
 
-    // === SAMPLE NAME in Sample panel ===
-    {
-        auto sampleName = processor.getSamplePlayer().getSampleName();
-        if (sampleName.isNotEmpty())
-        {
-            auto textCol = isBelgian ? juce::Colour(0xFF1E3F8C) : juce::Colour(0xFFE8B0C8);
-            g.setFont(juce::Font(juce::FontOptions("Outfit", 10.0f, juce::Font::bold)));
-            g.setColour(textCol.withAlpha(0.7f));
-            g.drawText(sampleName, 1030, 398, 312, 16, juce::Justification::centred, true);
-        }
-    }
 
     // NOTE: Section dimming moved to paintOverChildren() so it draws ON TOP of
     // child components (buttons, knobs, labels) — not behind them.
@@ -2337,9 +2290,7 @@ void TsyganatorEditor::paintOverChildren(juce::Graphics& g)
     // Painted OVER children so it visually dims buttons, knobs, and labels too.
     {
         auto playMode = processor.getPlayMode();
-        bool seqActive_dm = (playMode == TsyganatorProcessor::ModeSeqSynth ||
-                             playMode == TsyganatorProcessor::ModeSeqSample);
-        bool sampleActive_dm = (playMode == TsyganatorProcessor::ModeSeqSample);
+        bool seqActive_dm = (playMode == TsyganatorProcessor::ModeSeqSynth);
 
         // P28 — single, subtle dim wash aligned exactly to the section
         // cards drawn in paint(). The card outline already delimits each
@@ -2373,9 +2324,6 @@ void TsyganatorEditor::paintOverChildren(juce::Graphics& g)
                               .getUnion(arpModeCombo.getBounds())
                               .expanded(3).toFloat());
 
-        // Dim SAMPLE card when not in sample mode
-        if (!sampleActive_dm)
-            paintDimmedZone({ 1030.0f, 342.0f, 316.0f, 82.0f });
     }
 
     // (P44: EFFECTS split-header overpaint removed — VINTAGE and CHORUS
@@ -2659,7 +2607,6 @@ void TsyganatorEditor::layoutRow3()
     playOffButton.setBounds      (pmX,         y, 44, h);
     playArpButton.setBounds      (pmX +  48,   y, 44, h);
     playSeqSynthButton.setBounds (pmX +  96,   y, 70, h);
-    playSeqSampleButton.setBounds(pmX + 170,   y, 76, h);
 
     // Arp combos — placed at right edge of the panel.
     // arpRateCombo = note value (1/4, 1/8, ...), arpModeCombo = pattern (Up/Down/...).
@@ -2707,14 +2654,6 @@ void TsyganatorEditor::layoutRow3()
     // Pattern preset selector
     seqPatternCombo.setBounds(900, y + 2, 118, 24);
 
-    // Sample section — within SAMPLE card (x=1030..1346, w=316).
-    // P33: sampleCenterX recomputed from the actual card geometry
-    // (was based on the old panel x=1026, w=320 ⇒ shifted 2 px left).
-    int sampleCenterX = 1030 + 316 / 2;   // 1188 (was 1186)
-    int loadW = 230;
-    int loadH = h + 6;
-    int loadY = y - 3;
-    loadSampleButton.setBounds(sampleCenterX - loadW / 2, loadY, loadW, loadH);
 }
 
 void TsyganatorEditor::layoutRow4()
@@ -2896,7 +2835,6 @@ void TsyganatorEditor::timerCallback()
     playOffButton.setToggleState(playMode == TsyganatorProcessor::ModeOff, juce::dontSendNotification);
     playArpButton.setToggleState(playMode == TsyganatorProcessor::ModeArp, juce::dontSendNotification);
     playSeqSynthButton.setToggleState(playMode == TsyganatorProcessor::ModeSeqSynth, juce::dontSendNotification);
-    playSeqSampleButton.setToggleState(playMode == TsyganatorProcessor::ModeSeqSample, juce::dontSendNotification);
 
     // Sync chorus toggle buttons from parameter
     {

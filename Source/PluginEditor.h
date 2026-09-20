@@ -391,14 +391,12 @@ private:
     juce::TextButton playOffButton;
     juce::TextButton playArpButton;
     juce::TextButton playSeqSynthButton;
-    juce::TextButton playSeqSampleButton;
 
     // ========== Additional Buttons ==========
     juce::TextButton unisonButton;
     juce::TextButton tsyganizeButton;
     juce::TextButton initButton;
     juce::TextButton saveButton;
-    juce::TextButton loadSampleButton;
 
     // ========== Presets ==========
     juce::Label presetLabel;

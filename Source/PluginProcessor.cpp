@@ -31,8 +31,6 @@ TsyganatorProcessor::TsyganatorProcessor()
             // Output MIDI for DAW recording
             pendingMidiOut.addEvent(juce::MidiMessage::noteOn(1, transposed, vel), currentRenderSample);
         }
-        else if (playMode == ModeSeqSample)
-            samplePlayer.trigger(vel);
     };
     sequencer.onNoteGlide = [this](int fromNote, int toNote, float vel) {
         if (playMode == ModeSeqSynth)
@@ -342,7 +340,6 @@ void TsyganatorProcessor::prepareToPlay(double sampleRate, int /*samplesPerBlock
     lfo.reset();
     sequencer.setSampleRate(sampleRate);
     arpeggiator.setSampleRate(sampleRate);
-    samplePlayer.setHostSampleRate(sampleRate);
     vintage.setSampleRate(sampleRate);
     vintage.reset();
 
@@ -362,7 +359,6 @@ void TsyganatorProcessor::killAllNotes()
 {
     for (auto& v : voices)
         v.noteOff();
-    samplePlayer.stop();
 }
 
 void TsyganatorProcessor::setPlayMode(PlayMode newMode)
@@ -626,11 +622,6 @@ void TsyganatorProcessor::renderSegment (float* outL, float* outR,
         monoL *= unisonScale;
         monoR *= unisonScale;
 
-        // Mix in sample player
-        float sampleOut = samplePlayer.process();
-        monoL += sampleOut;
-        monoR += sampleOut;
-
         // (P37: LoFi/Crush stage removed — signal now goes straight to chorus.)
 
         // P1-2: Chorus is mono-sum-in / stereo-out by design. To preserve the
@@ -751,13 +742,6 @@ void TsyganatorProcessor::handleMidiEvent (const juce::MidiMessage& msg, int sam
                 // persists until the next note is played.
                 break;
 
-            case ModeSeqSample:
-                // Sequencer drives sample — keyboard plays synth
-                handleMidiMessage(msg);
-                // Pass-through keyboard notes to MIDI output
-                if (msg.isNoteOn() || msg.isNoteOff())
-                    pendingMidiOut.addEvent(msg, samplePos);
-                break;
         }
 }
 
@@ -1200,7 +1184,9 @@ void TsyganatorProcessor::setStateInformation(const void* data, int sizeInBytes)
         // instead, so it picks the change up within one tick.
 
         int pmVal = apvts.state.getProperty("playModeValue", 0);
-        playMode = static_cast<PlayMode>(std::clamp(pmVal, 0, 3));
+        // Clamp to 2: a session saved in the removed Seq Sample mode (3) lands
+        // on Seq Synth rather than on an invalid enum value.
+        playMode = static_cast<PlayMode>(std::clamp(pmVal, 0, 2));
 
         arpeggiator.setMode(static_cast<Arpeggiator::Mode>(
             (int)apvts.state.getProperty("arpMode", 0)));
