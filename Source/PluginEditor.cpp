@@ -771,6 +771,19 @@ juce::Typeface::Ptr TsyganatorLookAndFeel::getTypefaceForFont(const juce::Font& 
 //  separately, with a comment warning they "MUST match" — shared now so they
 //  cannot drift apart.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  12-column layout grid. Panel widths used to be arbitrary (190 to 626 px)
+//  with gutters varying between 6 and 10 px depending on the row. One system
+//  now: 12 columns of 100 px separated by 12 px, which fits the 1332 px
+//  content width exactly (12*100 + 11*12 = 1332).
+// ---------------------------------------------------------------------------
+namespace Grid
+{
+    constexpr int margin = 14, colW = 100, gutter = 12;
+    constexpr int x (int col)  { return margin + col * (colW + gutter); }
+    constexpr int w (int span) { return span * colW + (span - 1) * gutter; }
+}
+
 namespace SeqGrid
 {
     constexpr int cardX = 14,  cardY = 342, cardW = 1332, cardH = 212;
@@ -1838,21 +1851,21 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     };
 
     // Row 1 (y=80, h=150) — fader-based oscillators / filter / ADSRs
-    drawCard({  14.0f,  80.0f, 312.0f, 150.0f }, "OSC-1");
-    drawCard({ 334.0f,  80.0f, 318.0f, 150.0f }, "OSC-2");
-    drawCard({ 658.0f,  80.0f, 220.0f, 150.0f }, "FILTER");
-    drawCard({ 884.0f,  80.0f, 210.0f, 150.0f }, "FILTER ADSR");
-    drawCard({1100.0f,  80.0f, 246.0f, 150.0f }, "AMP ADSR");
+    drawCard({ (float)Grid::x(0),  80.0f, (float)Grid::w(3), 150.0f }, "OSC-1");
+    drawCard({ (float)Grid::x(3),  80.0f, (float)Grid::w(3), 150.0f }, "OSC-2");
+    drawCard({ (float)Grid::x(6),  80.0f, (float)Grid::w(2), 150.0f }, "FILTER");
+    drawCard({ (float)Grid::x(8),  80.0f, (float)Grid::w(2), 150.0f }, "FILTER ADSR");
+    drawCard({ (float)Grid::x(10), 80.0f, (float)Grid::w(2), 150.0f }, "AMP ADSR");
 
     // Row 2 (y=234, h=104) — P44 reflow:
     //   PERFORMANCE | LFO | VINTAGE | CHORUS | MASTER
     // Vintage and Chorus are SEPARATE cards (P39 merge was reverted —
     // user wanted clear independent sections with standard card headers).
-    drawCard({  14.0f, 234.0f, 360.0f, 104.0f }, "PERFORMANCE");
-    drawCard({ 383.0f, 234.0f, 280.0f, 104.0f }, "LFO");
-    drawCard({ 672.0f, 234.0f, 190.0f, 104.0f }, "VINTAGE");
-    drawCard({ 872.0f, 234.0f, 219.0f, 104.0f }, "CHORUS");
-    drawCard({1100.0f, 234.0f, 246.0f, 104.0f }, "MASTER");
+    drawCard({ (float)Grid::x(0),  234.0f, (float)Grid::w(3), 104.0f }, "PERFORMANCE");
+    drawCard({ (float)Grid::x(3),  234.0f, (float)Grid::w(3), 104.0f }, "LFO");
+    drawCard({ (float)Grid::x(6),  234.0f, (float)Grid::w(2), 104.0f }, "VINTAGE");
+    drawCard({ (float)Grid::x(8),  234.0f, (float)Grid::w(2), 104.0f }, "CHORUS");
+    drawCard({ (float)Grid::x(10), 234.0f, (float)Grid::w(2), 104.0f }, "MASTER");
 
     // Row 3 (y=342, h=82) — play mode / sequencer controls / sample
     drawCard({ (float)SeqGrid::cardX, (float)SeqGrid::cardY,
@@ -2403,7 +2416,7 @@ void TsyganatorEditor::layoutRow1()
     // OSC1 (7 faders ~42px each) — labels ABOVE faders, below section title
     // P33: osc1X 20 → 24 — symmetric centering in 312W card body
     // (7×40 + 6×2 = 292 cluster width, 10 px margin each side).
-    int osc1X = 24;
+    int osc1X = Grid::x(0) + (Grid::w(3) - 292) / 2;   // 7 faders = 292 px
     int labelAboveY = y - 14;  // 14px label just above fader top (y=84)
     sawLevelSlider.setBounds(osc1X, y, 40, h);
     sawLevelLabel.setBounds(osc1X, labelAboveY, 40, 14);
@@ -2422,7 +2435,7 @@ void TsyganatorEditor::layoutRow1()
 
     // OSC2 (6 faders + octave combo) — labels ABOVE
     // P33: osc2X 340 → 341 — fine centering tweak (1 px shift right).
-    int osc2X = 341;
+    int osc2X = Grid::x(3) + (Grid::w(3) - 304) / 2;   // 6 faders + octave = 304
     osc2SawSlider.setBounds(osc2X, y, 40, h);
     osc2SawLabel.setBounds(osc2X, labelAboveY, 40, 14);
     osc2PulseSlider.setBounds(osc2X + 42, y, 40, h);
@@ -2448,7 +2461,7 @@ void TsyganatorEditor::layoutRow1()
     // 3×58 + 2×10 = 194; (220-194)/2 = 13 → first knob at 658+13 = 671.
     int filterKnobSize = 58;
     int filterKnobSpacing = 68;
-    int filterX = 671;
+    int filterX = Grid::x(6) + (Grid::w(2) - 194) / 2; // 3 knobs = 194
     // Vertically center knob+label (74px) in usable panel area (96-230 = 134px)
     int fkY = 96 + (134 - (filterKnobSize + 16)) / 2;  // knob+gap+label centered in panel
     cutoffSlider.setBounds(filterX, fkY, filterKnobSize, filterKnobSize);
@@ -2461,7 +2474,7 @@ void TsyganatorEditor::layoutRow1()
     // Filter ADSR (4 faders centered in 210px card body at x=884..1094)
     // P33: filterAdsrX 917 → 919 for symmetric margins
     // (4×32 + 3×4 = 140 cluster width; (210-140)/2 = 35 → 884+35 = 919).
-    int filterAdsrX = 919;
+    int filterAdsrX = Grid::x(8) + (Grid::w(2) - 140) / 2;  // 4 faders = 140
     filterAttackSlider.setBounds(filterAdsrX, y, 32, h);
     filterAttackLabel.setBounds(filterAdsrX - 8, labelAboveY, 48, 14);
     filterDecaySlider.setBounds(filterAdsrX + 36, y, 32, h);
@@ -2473,7 +2486,7 @@ void TsyganatorEditor::layoutRow1()
 
     // Amp ADSR — same height as oscillators, centered within card (x=1100..1346, w=246)
     // P33: ampAdsrX 1151 → 1153 — symmetric margins (53 px each side).
-    int ampAdsrX = 1153;
+    int ampAdsrX = Grid::x(10) + (Grid::w(2) - 140) / 2;
     ampAttackSlider.setBounds(ampAdsrX, y, 32, h);
     ampAttackLabel.setBounds(ampAdsrX - 8, labelAboveY, 48, 14);
     ampDecaySlider.setBounds(ampAdsrX + 36, y, 32, h);
@@ -2510,9 +2523,10 @@ void TsyganatorEditor::layoutRow2()
     // -------- PERFORMANCE card (x=14..374) --------
     // 5 slots × 60 + 4 gaps × 10 + 2 margins × 10 = 360
     {
-        const int slotW = 60;
-        const int gap   = 10;
-        auto col = [&](int i) { return 14 + 10 + i * (slotW + gap); };
+        const int slotW = 56;   // 5 slots must fit 324 px: 5*56 + 4*8 = 312
+        const int gap   = 8;
+        auto col = [&](int i) { return Grid::x(0) + (Grid::w(3) - (5 * slotW + 4 * gap)) / 2
+                                       + i * (slotW + gap); };
         unisonButton.setBounds        (col(0), btnCenterY, slotW, 28);
         unisonDetuneSlider.setBounds  (col(1), y, slotW, h);
         unisonDetuneLabel.setBounds   (col(1), y + h + 2, slotW, 14);
@@ -2530,7 +2544,8 @@ void TsyganatorEditor::layoutRow2()
     {
         const int slotW = 60;
         const int gap   = 8;
-        auto col = [&](int i) { return 383 + 8 + i * (slotW + gap); };
+        auto col = [&](int i) { return Grid::x(3) + (Grid::w(3) - (4 * slotW + 3 * gap)) / 2
+                                       + i * (slotW + gap); };
         // col 0: Rate (free) — overlapped by SyncRate combo when sync ON
         lfoRateSlider.setBounds   (col(0), y, slotW, h);
         lfoRateLabel.setBounds    (col(0), y + h + 2, slotW, 14);
@@ -2554,7 +2569,7 @@ void TsyganatorEditor::layoutRow2()
     {
         const int slotW = 60;
         const int gap   = 12;
-        const int x0    = 672 + 29;            // 701
+        const int x0 = Grid::x(6) + (Grid::w(2) - (2 * slotW + gap)) / 2;
         vintageButton.setBounds      (x0,                  btnCenterY, slotW, 28);
         vintageAmountSlider.setBounds(x0 + slotW + gap,    y,          slotW, h);
         vintageAmountLabel.setBounds (x0 + slotW + gap,    y + h + 2,  slotW, 14);
@@ -2565,7 +2580,7 @@ void TsyganatorEditor::layoutRow2()
     // Toggle centre y=286 to match knob centres across Row 2.
     {
         const int toggleW = 36, toggleH = 36, toggleGap = 8;
-        const int chorusCardX = 872, chorusCardW = 219;
+        const int chorusCardX = Grid::x(8), chorusCardW = Grid::w(2);
         const int totalChorusW = toggleW * 4 + toggleGap * 3;
         const int chorusX = chorusCardX + (chorusCardW - totalChorusW) / 2;
         const int toggleY = 268;
@@ -2583,8 +2598,8 @@ void TsyganatorEditor::layoutRow2()
     // knob centre (252+34=286) aligns with the 60 px knobs in PERF/LFO/
     // EFFECTS (256+30=286).
     {
-        const int masterX        = 1100;
-        const int masterW        = 246;
+        const int masterX        = Grid::x(10);
+        const int masterW        = Grid::w(2);
         // Was 68 px: the only knob bigger than its row. PERF / LFO / VINTAGE
         // in the same row are 60 px, so it now matches them exactly.
         const int masterKnobSize = 60;
