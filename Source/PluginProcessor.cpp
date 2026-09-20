@@ -205,10 +205,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout TsyganatorProcessor::createP
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("lfoDepth", 1), "LFO Depth", 0.0f, 1.0f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID("lfoWaveform", 1), "LFO Wave",
+        juce::ParameterID("lfoWaveform", 1), "LFO Waveform",
         juce::StringArray{"Sine", "Triangle", "Saw", "Square", "S&H"}, 0));
     params.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID("lfoDestination", 1), "LFO Dest",
+        juce::ParameterID("lfoDestination", 1), "LFO Destination",
         juce::StringArray{"Cutoff", "Pulse Width", "Pitch", "Volume"}, 0));
 
     // LFO Sync
@@ -236,7 +236,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout TsyganatorProcessor::createP
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("osc2Triangle", 1), "OSC2 Triangle", 0.0f, 1.0f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("osc2PW", 1), "OSC2 PW", 0.05f, 0.95f, 0.5f));
+        juce::ParameterID("osc2PW", 1), "OSC2 Pulse Width", 0.05f, 0.95f, 0.5f));
     params.push_back(std::make_unique<juce::AudioParameterChoice>(
         juce::ParameterID("osc2Octave", 1), "OSC2 Octave",
         juce::StringArray{"-2", "-1", "0", "+1", "+2"}, 2));
@@ -265,7 +265,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout TsyganatorProcessor::createP
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("seqSwing", 1), "Seq Swing", 0.0f, 0.7f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("seqGateLength", 1), "Seq Gate",
+        juce::ParameterID("seqGateLength", 1), "Seq Gate Length",
         juce::NormalisableRange<float>(0.05f, 1.0f, 0.01f), 0.5f));
     params.push_back(std::make_unique<juce::AudioParameterInt>(
         juce::ParameterID("seqNumSteps", 1), "Seq Steps", 1, 16, 16));

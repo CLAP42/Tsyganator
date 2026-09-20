@@ -815,7 +815,7 @@ namespace Grid
     constexpr int row2Y = row1Y + row1H + gutter;      // 246
     constexpr int row2H = 104;
     constexpr int row3Y = row2Y + row2H + gutter;      // 362
-    constexpr int row3H = 212;
+    constexpr int row3H = 184;
     constexpr int footerY = row3Y + row3H + gutter;    // 586
     constexpr int windowH = footerY + 26 + gutter;     // 624
 
@@ -827,7 +827,9 @@ namespace SeqGrid
 {
     constexpr int cardX = Grid::margin, cardY = Grid::row3Y,
                   cardW = Grid::w(12),  cardH = Grid::row3H;
-    constexpr int gridY = Grid::row3Y + 82, gridH = 116;   // step cells
+    // 116 px left 42 px of nothing between the note name and the velocity
+    // bar. 88 px fits the content (index, note, bar) without dead air.
+    constexpr int gridY = Grid::row3Y + 82, gridH = 88;
     constexpr int ledY  = gridY - 9;             // LED row above the cells
     constexpr int firstX = 25, usableW = 1320;   // step strip
 }
@@ -1085,11 +1087,14 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     setupKnob(lfoDepthSlider, lfoDepthLabel, lfoDepthAttach, "lfoDepth", "Depth");
 
     // lfoWaveform: parameter has 5 choices: "Sine", "Triangle", "Saw", "Square", "S&H"
-    lfoWaveformCombo.addItem("Sine", 1);
-    lfoWaveformCombo.addItem("Tri", 2);
-    lfoWaveformCombo.addItem("Saw", 3);
-    lfoWaveformCombo.addItem("Sq", 4);
-    lfoWaveformCombo.addItem("S&H", 5);
+    // These must read exactly like the parameter's own values, which the host
+    // displays in its automation lane. They used to be abbreviated separately
+    // ("Tri", "Sq", "Cut", "PW", "Vol"), so the plugin and the DAW disagreed.
+    lfoWaveformCombo.addItem("Sine",     1);
+    lfoWaveformCombo.addItem("Triangle", 2);
+    lfoWaveformCombo.addItem("Saw",      3);
+    lfoWaveformCombo.addItem("Square",   4);
+    lfoWaveformCombo.addItem("S&H",      5);
     addAndMakeVisible(lfoWaveformCombo);
     lfoWaveformAttach = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         processor.apvts, "lfoWaveform", lfoWaveformCombo);
@@ -1101,10 +1106,10 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     // lfoDestination: parameter has 4 choices: "Cutoff", "Pulse Width", "Pitch", "Volume"
     // P23: shortened "Cutoff" to "Cut" so it no longer truncates to "Cu..."
     // inside the narrow combo box.
-    lfoDestinationCombo.addItem("Cut",   1);
-    lfoDestinationCombo.addItem("PW",    2);
-    lfoDestinationCombo.addItem("Pitch", 3);
-    lfoDestinationCombo.addItem("Vol",   4);
+    lfoDestinationCombo.addItem("Cutoff",      1);
+    lfoDestinationCombo.addItem("Pulse Width",  2);
+    lfoDestinationCombo.addItem("Pitch",        3);
+    lfoDestinationCombo.addItem("Volume",       4);
     addAndMakeVisible(lfoDestinationCombo);
     lfoDestinationAttach = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         processor.apvts, "lfoDestination", lfoDestinationCombo);
@@ -1866,26 +1871,12 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     // Each card: drop shadow → gradient body → filled header bar →
     // header title → top highlight → outline. Sized to wrap each row's
     // existing component cluster (no resized() changes required).
-    // `prominent` keeps the old fully-filled bar. Eleven saturated bars all
-    // shouting at the same volume gave the panel no hierarchy, so only the
-    // sequencer — the full-width centrepiece — keeps it; every other card gets
-    // a quiet wash with a hairline rule under the title.
     // Title colour for the quiet bar has to contrast with the WASHED header,
     // which differs per theme. Measured: navy on Belgian 4.91:1, light rose on
     // Italian 5.97:1 (the accent rose would only have reached 2.85:1).
-    const auto quietTitle = isBelgian ? juce::Colour(0xFF1E3F8C) : juce::Colour(0xFFE8B0C8);
 
-    // Header bar = a LIGHTNESS step of the card, hue and saturation untouched.
-    // Washing the accent into the card instead mixed two near-complementary
-    // hues and produced mud: navy at 20% over the gold card dropped saturation
-    // from 87% to 51% (khaki), and rose over plum from 45% to 37%.
-    // Measured here: same hue, same saturation, 7 points of lightness.
-    //   Belgian  card #F2D74A -> bar #F0D029   title contrast 6.41:1
-    //   Italian  card #3A1F52 -> bar #4C296C   title contrast 6.23:1
-    const auto headerBar = isBelgian ? juce::Colour(0xFFF0D029) : juce::Colour(0xFF4C296C);
 
-    auto drawCard = [&](juce::Rectangle<float> rect, const juce::String& title,
-                        bool prominent = false)
+    auto drawCard = [&](juce::Rectangle<float> rect, const juce::String& title)
     {
         constexpr float cornerR = 4.0f;
         constexpr float headerH = 16.0f;
@@ -1901,22 +1892,13 @@ void TsyganatorEditor::paint(juce::Graphics& g)
         g.fillRoundedRectangle(rect, cornerR);
 
         juce::Rectangle<float> header(rect.getX(), rect.getY(), rect.getWidth(), headerH);
-        g.setColour(prominent ? headerFill : headerBar);
+        g.setColour(headerFill);
         g.fillRoundedRectangle(header, cornerR);
         g.fillRect(header.getX(), header.getY() + headerH - cornerR,
                    header.getWidth(), cornerR);
 
-        if (! prominent)
-        {
-            // Single accent hairline: the only place the accent colour appears
-            // on a quiet card, which is what keeps it crisp.
-            g.setColour(headerFill.withAlpha(0.85f));
-            g.fillRect(header.getX() + 1.0f, header.getBottom() - 1.0f,
-                       header.getWidth() - 2.0f, 1.0f);
-        }
-
         g.setFont(juce::Font(juce::FontOptions("Outfit", 10.5f, juce::Font::bold)));
-        g.setColour(prominent ? headerText : quietTitle);
+        g.setColour(headerText);
         g.drawText(title, header.toNearestInt(), juce::Justification::centred);
 
         // (The white highlight that used to sit here made a third parallel line
@@ -1952,7 +1934,7 @@ void TsyganatorEditor::paint(juce::Graphics& g)
 
     // Row 3 (y=342, h=82) — play mode / sequencer controls / sample
     drawCard({ (float)SeqGrid::cardX, (float)SeqGrid::cardY,
-               (float)SeqGrid::cardW, (float)SeqGrid::cardH }, "SEQUENCER", true);
+               (float)SeqGrid::cardW, (float)SeqGrid::cardH }, "SEQUENCER");
 
     // Row 4 (y=428, h=126) — step sequencer grid
 
@@ -2297,7 +2279,10 @@ void TsyganatorEditor::paint(juce::Graphics& g)
                        juce::Justification::topLeft);
         }
 
-        // Note name — centered in step
+        // Note name — centred between the index at the top and the velocity
+        // bar at the bottom, so it follows the cell height instead of sitting
+        // at a fixed offset.
+        const int noteTextY = SEQ_GRID_Y + (14 + (SEQ_GRID_H - 24)) / 2 - 7;
         {
             g.setFont(juce::Font(juce::FontOptions("JetBrains Mono", 12.5f, juce::Font::bold)));
             if (step.active)
@@ -2305,13 +2290,13 @@ void TsyganatorEditor::paint(juce::Graphics& g)
                 g.setColour(juce::Colours::white.withAlpha(0.95f));
                 // Show what is actually SOUNDING: a played note transposes the
                 // whole sequence, so the written pitch is no longer what you hear.
-                g.drawText(midiNoteName(step.note + seqTranspose), stepX + 1, SEQ_GRID_Y + 34,
+                g.drawText(midiNoteName(step.note + seqTranspose), stepX + 1, noteTextY,
                            stepWidth - 4, 14, juce::Justification::centred);
             }
             else
             {
                 g.setColour(textColour.withAlpha(0.35f));
-                g.drawText("--", stepX + 1, SEQ_GRID_Y + 34,
+                g.drawText("--", stepX + 1, noteTextY,
                            stepWidth - 4, 14, juce::Justification::centred);
             }
         }
@@ -2625,10 +2610,25 @@ void TsyganatorEditor::layoutRow2()
     // -------- LFO card (x=383..663) --------
     // 4 columns × 60 + 3 gaps × 8 + 2 margins × 8 = 280
     {
-        const int slotW = 60;
-        const int gap   = 8;
-        auto col = [&](int i) { return Grid::x(3) + (Grid::w(3) - (4 * slotW + 3 * gap)) / 2
-                                       + i * (slotW + gap); };
+        const int slotW = 56;
+        const int gap   = 6;
+        // The two combos need more room than a knob slot: the Destination box
+        // was 60 px and rendered "Cutoff" as "Cut", and "Pulse Width" would
+        // have fared worse. Knobs keep the 60 px slot shared with the other
+        // cards; the combos get 74 and 90.
+        const int comboW1 = 72, comboW2 = 112;   // 'Pulse Width' needs the room
+        const int lfoRun  = slotW * 2 + comboW1 + comboW2 + gap * 3;
+        const int lfoX0   = Grid::x(3) + (Grid::w(3) - lfoRun) / 2;
+        auto col = [&](int i)
+        {
+            switch (i)
+            {
+                case 0:  return lfoX0;
+                case 1:  return lfoX0 + slotW + gap;
+                case 2:  return lfoX0 + (slotW + gap) * 2;
+                default: return lfoX0 + (slotW + gap) * 2 + comboW1 + gap;
+            }
+        };
         // col 0: Rate (free) — overlapped by SyncRate combo when sync ON
         lfoRateSlider.setBounds   (col(0), y, slotW, h);
         lfoRateLabel.setBounds    (col(0), y + h + 2, slotW, 14);
@@ -2638,12 +2638,12 @@ void TsyganatorEditor::layoutRow2()
         lfoDepthSlider.setBounds  (col(1), y, slotW, h);
         lfoDepthLabel.setBounds   (col(1), y + h + 2, slotW, 14);
         // col 2: Sync button (top) + Wave combo (bottom) — stacked
-        lfoSyncButton.setBounds   (col(2), y + 2,  slotW, 24);
-        lfoWaveformCombo.setBounds(col(2), y + 32, slotW, 22);
-        lfoWaveformLabel.setBounds(col(2) - 6, y + 56, slotW + 12, 14);
+        lfoSyncButton.setBounds   (col(2), y + 2,  comboW1, 24);
+        lfoWaveformCombo.setBounds(col(2), y + 32, comboW1, 22);
+        lfoWaveformLabel.setBounds(col(2), y + 56, comboW1, 14);
         // col 3: Dest combo (bottom half only, top deliberately empty)
-        lfoDestinationCombo.setBounds(col(3), y + 32, slotW, 22);
-        lfoDestinationLabel.setBounds(col(3) - 8, y + 56, slotW + 16, 14);
+        lfoDestinationCombo.setBounds(col(3), y + 32, comboW2, 22);
+        lfoDestinationLabel.setBounds(col(3), y + 56, comboW2, 14);
     }
 
     // -------- VINTAGE card (x=672..862, w=190) — P44 split from EFFECTS --------
@@ -2723,53 +2723,55 @@ void TsyganatorEditor::layoutRow3()
     auto caption = [&](juce::Label& l, int x, int w) { l.setBounds(x, cy, w, cH); };
 
     // A — play mode -------------------------------------------------------
+    // One gap inside a group (8 px), one between groups (18 px). The strip
+    // previously mixed 0, 6, 8 and 16 px internally and 16 or 20 between.
     playOffButton.setBounds     ( 24, y, 56, h);
-    playArpButton.setBounds     ( 86, y, 56, h);
-    playSeqSynthButton.setBounds(148, y, 88, h);
-    caption(seqPlayModeLabel, 24, 212);
+    playArpButton.setBounds     ( 88, y, 56, h);
+    playSeqSynthButton.setBounds(152, y, 88, h);
+    caption(seqPlayModeLabel, 24, 216);
 
     // B — arpeggiator. The rate combo was 50 px and showed "..." because
     //     "1/16" plus the arrow did not fit.
-    arpRateCombo.setBounds(252, y + 2, 66, 28);
-    arpModeCombo.setBounds(324, y + 2, 76, 28);
-    caption(arpLabel, 252, 148);
+    arpRateCombo.setBounds(258, y + 2, 66, 28);
+    arpModeCombo.setBounds(332, y + 2, 76, 28);
+    caption(arpLabel, 258, 150);
     arpModeLabel.setBounds(-100, -100, 1, 1);
     arpRateLabel.setBounds(-100, -100, 1, 1);
 
     // C — step count ------------------------------------------------------
-    stepMinusButton.setBounds  (416, y, 34, h);
-    seqNumStepsLabel.setBounds (450, y, 40, h);
-    stepPlusButton.setBounds   (490, y, 34, h);
-    caption(sequencerLabel, 416, 108);
+    stepMinusButton.setBounds  (426, y, 34, h);
+    seqNumStepsLabel.setBounds (460, y, 40, h);
+    stepPlusButton.setBounds   (500, y, 34, h);
+    caption(sequencerLabel, 426, 108);
 
     // D — swing / gate ----------------------------------------------------
     const int knobSz = 40;
     const int knobY  = y - 4;
-    seqSwingSlider.setBounds     (540, knobY, knobSz, knobSz);
-    seqGateLengthSlider.setBounds(596, knobY, knobSz, knobSz);
-    caption(seqSwingLabel,      534, 52);
-    caption(seqGateLengthLabel, 590, 52);
+    seqSwingSlider.setBounds     (552, knobY, knobSz, knobSz);
+    seqGateLengthSlider.setBounds(600, knobY, knobSz, knobSz);
+    caption(seqSwingLabel,      546, 52);
+    caption(seqGateLengthLabel, 594, 52);
 
     // E — pattern actions -------------------------------------------------
-    seqRandButton.setBounds (656, y, 96, h);
-    seqClearButton.setBounds(760, y, 80, h);
+    seqRandButton.setBounds (658, y, 96, h);
+    seqClearButton.setBounds(762, y, 80, h);
 
     // F — step flags ------------------------------------------------------
-    seqGlideButton.setBounds (856, y, 76, h);
-    seqAccentButton.setBounds(940, y, 84, h);
+    seqGlideButton.setBounds (860, y, 76, h);
+    seqAccentButton.setBounds(944, y, 84, h);
 
     // G — nudge the selected step ----------------------------------------
     const int stackH = (h - 2) / 2;
-    seqNotePlusButton.setBounds (1040, y,               52, stackH);
-    seqNoteMinusButton.setBounds(1040, y + stackH + 2,  52, stackH);
-    seqVelPlusButton.setBounds  (1100, y,               52, stackH);
-    seqVelMinusButton.setBounds (1100, y + stackH + 2,  52, stackH);
-    caption(seqNoteLabel, 1040, 52);
-    caption(seqVelLabel,  1100, 52);
+    seqNotePlusButton.setBounds (1046, y,               52, stackH);
+    seqNoteMinusButton.setBounds(1046, y + stackH + 2,  52, stackH);
+    seqVelPlusButton.setBounds  (1106, y,               52, stackH);
+    seqVelMinusButton.setBounds (1106, y + stackH + 2,  52, stackH);
+    caption(seqNoteLabel, 1046, 52);
+    caption(seqVelLabel,  1106, 52);
 
     // H — pattern bank ----------------------------------------------------
-    seqPatternCombo.setBounds(1168, y + 2, 168, 28);
-    caption(seqPatternLabel, 1168, 168);
+    seqPatternCombo.setBounds(1176, y + 2, 160, 28);
+    caption(seqPatternLabel, 1176, 160);
 }
 
 
