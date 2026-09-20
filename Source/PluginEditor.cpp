@@ -1148,6 +1148,10 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     // ========== Master Section ==========
     setupKnob(masterGainSlider, masterGainLabel, masterGainAttach, "masterGain", "Master");
     masterGainSlider.setComponentID("masterKnob");  // Skip center readout — dB shown below
+    // This was the only label in the editor without an explicit justification,
+    // so it fell back to JUCE's centredLeft default: the text sat at the left
+    // edge of its 100 px box instead of under the knob it belongs to.
+    masterDbLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(masterDbLabel);
     masterLabel.setText("Master", juce::dontSendNotification);
     masterLabel.setJustificationType(juce::Justification::centred);
