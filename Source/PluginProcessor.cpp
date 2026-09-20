@@ -35,6 +35,19 @@ TsyganatorProcessor::TsyganatorProcessor()
         else if (playMode == ModeSeqSample)
             samplePlayer.trigger(vel);
     };
+    sequencer.onNoteGlide = [this](int fromNote, int toNote, float vel) {
+        if (playMode == ModeSeqSynth)
+        {
+            const int off = seqTransposeOffset.load(std::memory_order_relaxed);
+            int from = std::clamp(fromNote + off, 0, 127);
+            int to   = std::clamp(toNote   + off, 0, 127);
+            handleSequencerNoteGlide(from, to, vel);
+            // The DAW still needs a legato note pair to record.
+            pendingMidiOut.addEvent(juce::MidiMessage::noteOn(1, to, vel), currentRenderSample);
+            pendingMidiOut.addEvent(juce::MidiMessage::noteOff(1, from), currentRenderSample);
+        }
+    };
+
     sequencer.onNoteOff = [this](int note) {
         if (playMode == ModeSeqSynth)
         {
@@ -851,6 +864,38 @@ void TsyganatorProcessor::handleSequencerNoteOn(int note, float velocity)
     target->setAgeStamp(++voiceAgeCounter);
     target->noteOn(note, velocity);
     lastPlayedNote = note;
+}
+
+void TsyganatorProcessor::handleSequencerNoteGlide(int fromNote, int toNote, float velocity)
+{
+    lastNoteOnTime.store(juce::Time::getMillisecondCounterHiRes(), std::memory_order_relaxed);
+
+    float velCurve = params.velocityCurve->load();
+    if (velCurve > 0.01f)
+        velocity = velocity * (1.0f - velCurve) + (velocity * velocity) * velCurve;
+
+    if (juce::roundToInt(params.unisonMode->load()) == 1)
+    {
+        for (auto& v : voices)
+            v.glideTo(toNote, velocity);
+        lastUnisonNote = toNote;
+        lastPlayedNote = toNote;
+        return;
+    }
+
+    for (auto& v : voices)
+    {
+        if (v.isActive() && v.getCurrentNote() == fromNote)
+        {
+            v.glideTo(toNote, velocity);
+            v.setAgeStamp(++voiceAgeCounter);
+            lastPlayedNote = toNote;
+            return;
+        }
+    }
+
+    // Nothing was sounding on that note — fall back to a normal trigger.
+    handleSequencerNoteOn(toNote, velocity);
 }
 
 void TsyganatorProcessor::handleSequencerNoteOff(int note)

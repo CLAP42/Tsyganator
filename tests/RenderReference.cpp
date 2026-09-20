@@ -34,6 +34,8 @@
 
 #include <functional>
 #include <vector>
+#include <set>
+#include <array>
 
 //==============================================================================
 namespace
@@ -43,6 +45,35 @@ struct MidiEvent
 {
     int samplePos;
     juce::MidiMessage msg;
+};
+
+/** Minimal transport so scenarios can drive the sequencer and the arpeggiator.
+    Without it getPlayHead() returns null and neither ever advances. */
+class FakePlayHead : public juce::AudioPlayHead
+{
+public:
+    FakePlayHead (double bpmIn, double srIn) : bpm (bpmIn), sr (srIn) {}
+
+    void setPlaying (bool p) { playing = p; }
+    void advance (int numSamples)
+    {
+        if (playing) ppq += (double) numSamples / sr * (bpm / 60.0);
+    }
+    double getPpq() const { return ppq; }
+
+    juce::Optional<PositionInfo> getPosition() const override
+    {
+        PositionInfo pos;
+        pos.setBpm (bpm);
+        pos.setPpqPosition (ppq);
+        pos.setIsPlaying (playing);
+        pos.setTimeInSamples ((juce::int64) (ppq / (bpm / 60.0) * sr));
+        return pos;
+    }
+
+private:
+    double bpm, sr, ppq = 0.0;
+    bool   playing = false;
 };
 
 struct Scenario
@@ -57,6 +88,10 @@ struct Scenario
     // Optional: called before every block with progress in [0,1]. Scenarios
     // that leave it null render exactly as they did before this hook existed.
     std::function<void (TsyganatorProcessor&, double)>   automate;
+    // Optional transport. `transport` is called each block with progress in
+    // [0,1] and decides whether the host is rolling.
+    double                                              bpm = 0.0;   // 0 = no playhead
+    std::function<bool (double)>                        transport;
 };
 
 //==============================================================================
@@ -279,6 +314,50 @@ std::vector<Scenario> buildScenarios()
         }
     });
 
+    // ---- 5. Sequencer with glide steps, then transport stop ----
+    //  Glide steps deliberately skip the note-off for the previous note. If the
+    //  engine does not hand that voice over (legato), the old voice is orphaned
+    //  and, with a non-zero sustain, rings forever. This scenario plays a glide
+    //  pattern, stops the transport, and leaves 1.5 s of tail: a correct engine
+    //  is silent there.
+    s.push_back ({
+        "seq_glide_stuck",
+        "Sequencer with glides, transport stops at 60% — tail must be silent",
+        48000.0, 512, 4.0,
+        [] (TsyganatorProcessor& p)
+        {
+            neutralBase (p);
+            p.setPlayMode (TsyganatorProcessor::ModeSeqSynth);
+            setParam (p, "sawLevel", 1.0f);
+            setParam (p, "subLevel", 0.3f);
+            setParam (p, "cutoff", 2000.0f);
+            setParam (p, "resonance", 0.3f);
+            setParam (p, "ampAttack", 0.005f);
+            setParam (p, "ampDecay", 0.1f);
+            setParam (p, "ampSustain", 1.0f);   // a stranded voice can never fade
+            setParam (p, "ampRelease", 0.2f);
+            setParam (p, "portamento", 0.25f);
+            setParam (p, "seqNumSteps", 8.0f);
+            setParam (p, "seqRate", 4.0f);      // 1/16
+            setParam (p, "seqGateLength", 0.5f);
+
+            auto& sq = p.getSequencer();
+            sq.clearAllSteps();
+            const int notes[8] = { 36, 43, 39, 46, 36, 48, 41, 43 };
+            for (int i = 0; i < 8; ++i)
+            {
+                sq.setStepNote (i, notes[i]);
+                sq.setStepActive (i, true);
+                sq.setStepVelocity (i, 0.85f);
+                sq.setStepGlide (i, (i % 2) == 1);   // glide on every other step
+            }
+        },
+        [] (double) { return std::vector<MidiEvent>{}; },   // no keyboard MIDI
+        nullptr,
+        120.0,
+        [] (double progress) { return progress < 0.60; }    // transport stops at 60%
+    });
+
     return s;
 }
 
@@ -287,7 +366,14 @@ juce::AudioBuffer<float> renderScenario (const Scenario& sc)
 {
     TsyganatorProcessor proc;
 
-    proc.setPlayHead (nullptr);          // no transport: seq/arp stay silent
+    std::unique_ptr<FakePlayHead> ph;
+    if (sc.bpm > 0.0)
+    {
+        ph = std::make_unique<FakePlayHead> (sc.bpm, sc.sampleRate);
+        proc.setPlayHead (ph.get());
+    }
+    else
+        proc.setPlayHead (nullptr);      // no transport: seq/arp stay silent
     proc.setNonRealtime (true);
     sc.setup (proc);
     proc.prepareToPlay (sc.sampleRate, sc.blockSize);
@@ -310,8 +396,13 @@ juce::AudioBuffer<float> renderScenario (const Scenario& sc)
     {
         const int n = juce::jmin (sc.blockSize, total - pos);
 
+        const double progress = (double) pos / (double) juce::jmax (1, total - 1);
+
         if (sc.automate != nullptr)
-            sc.automate (proc, (double) pos / (double) juce::jmax (1, total - 1));
+            sc.automate (proc, progress);
+
+        if (ph != nullptr && sc.transport != nullptr)
+            ph->setPlaying (sc.transport (progress));
 
         juce::AudioBuffer<float> sub (block.getArrayOfWritePointers(), 2, n);
         sub.clear();
@@ -324,6 +415,9 @@ juce::AudioBuffer<float> renderScenario (const Scenario& sc)
         }
 
         proc.processBlock (sub, mb);
+
+        if (ph != nullptr)
+            ph->advance (n);
 
         for (int ch = 0; ch < 2; ++ch)
             out.copyFrom (ch, pos, sub, ch, 0, n);
@@ -447,6 +541,66 @@ int main (int argc, char* argv[])
         for (auto& sc : scenarios)
             std::cout << sc.name << "  [" << sc.sampleRate << " Hz, block " << sc.blockSize
                       << ", " << sc.seconds << " s]\n    " << sc.description << "\n";
+        return 0;
+    }
+
+    if (args[0] == "--randstats" || args[0] == "--patternstats")
+    {
+        auto report = [] (const juce::String& name,
+                          const std::vector<std::array<int,4>>& steps)   // note, active, glide, accent
+        {
+            int n = 0, leaps = 0, glides = 0, accents = 0, actives = 0, rests = 0;
+            double intervalSum = 0.0;
+            std::set<int> distinct;
+            int prev = -1;
+            for (auto& st : steps)
+            {
+                if (!st[1]) { ++rests; continue; }
+                ++actives; distinct.insert (st[0]);
+                if (st[2]) ++glides;
+                if (st[3]) ++accents;
+                if (prev >= 0) { int iv = std::abs (st[0] - prev); intervalSum += iv; if (iv >= 12) ++leaps; ++n; }
+                prev = st[0];
+            }
+            std::cout << "  " << name.paddedRight(' ', 22)
+                      << " notes distinctes " << juce::String(distinct.size()).paddedLeft(' ', 2)
+                      << " | intervalle moy " << juce::String(n ? intervalSum / n : 0.0, 1).paddedLeft(' ', 4)
+                      << " | sauts >=1oct " << juce::String(n ? 100.0 * leaps / n : 0.0, 0).paddedLeft(' ', 3) << "%"
+                      << " | glide " << juce::String(actives ? 100.0 * glides / actives : 0.0, 0).paddedLeft(' ', 3) << "%"
+                      << " | silences " << juce::String(100.0 * rests / (double) steps.size(), 0).paddedLeft(' ', 3) << "%"
+                      << "\n";
+        };
+
+        if (args[0] == "--randstats")
+        {
+            const int reps = args.size() > 1 ? args[1].getIntValue() : 40;
+            StepSequencer sq;
+            std::vector<std::array<int,4>> all;
+            for (int r = 0; r < reps; ++r)
+            {
+                sq.randomizePattern();
+                for (int i = 0; i < StepSequencer::MAX_STEPS; ++i)
+                {
+                    auto st = sq.getStep (i);
+                    all.push_back ({ st.note, st.active ? 1 : 0, st.glide ? 1 : 0, st.accent ? 1 : 0 });
+                }
+            }
+            std::cout << "Randomize sur " << reps << " tirages :\n";
+            report ("agrege", all);
+        }
+        else
+        {
+            std::cout << "Les 24 patterns d'usine :\n";
+            for (int p = 0; p < StepSequencer::NUM_PATTERNS; ++p)
+            {
+                const auto& pat = StepSequencer::getPattern (p);
+                std::vector<std::array<int,4>> v;
+                for (int i = 0; i < StepSequencer::MAX_STEPS; ++i)
+                    v.push_back ({ pat.data[i].note, pat.data[i].active ? 1 : 0,
+                                   pat.data[i].glide ? 1 : 0, pat.data[i].accent ? 1 : 0 });
+                report (juce::String (pat.name), v);
+            }
+        }
         return 0;
     }
 

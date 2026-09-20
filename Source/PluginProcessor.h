@@ -230,6 +230,7 @@ private:
     void handleMidiMessage(const juce::MidiMessage& msg);
     void handleSequencerNoteOn(int note, float velocity);
     void handleSequencerNoteOff(int note);
+    void handleSequencerNoteGlide(int fromNote, int toNote, float velocity);
     void updateVoiceParams();
     void killAllNotes();
 

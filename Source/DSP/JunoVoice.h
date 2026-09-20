@@ -83,6 +83,49 @@ public:
         active = true;
     }
 
+    /**
+     * Legato pitch change for sequencer glide steps.
+     *
+     * The sequencer deliberately skips the note-off before a glide step, but
+     * the processor used to answer it with a plain noteOn(), which allocates a
+     * DIFFERENT voice: the previous one was never released (it stayed stuck at
+     * its sustain level) and the new one started already in tune, so nothing
+     * actually glided. This retargets the voice that is already sounding, so
+     * portamento does its job and no voice is stranded. Envelopes are NOT
+     * retriggered — that is the whole point of a glide.
+     */
+    void glideTo(int midiNote, float velocity)
+    {
+        if (!active) { noteOn(midiNote, velocity); return; }
+
+        currentNote = midiNote;
+        currentVelocity = velocity;
+
+        float freq = 440.0f * std::pow(2.0f, (midiNote - 69) / 12.0f);
+        float totalDetune = detuneCents + globalFineCents;
+        if (std::abs(totalDetune) > 0.01f)
+            freq *= std::pow(2.0f, totalDetune / 1200.0f);
+
+        targetFrequency = freq;
+        osc2TargetFreq  = freq * std::pow(2.0f, (float)osc2Octave)
+                               * std::pow(2.0f, osc2FineCents / 1200.0f);
+
+        if (portamentoAmount > 0.001f)
+        {
+            float denom = portamentoAmount * (float)sampleRate * 0.5f;
+            portamentoCoeff = (denom > 0.001f)
+                                ? 1.0f - std::pow(0.999f, 1.0f / denom)
+                                : 1.0f;
+        }
+        else
+        {
+            // No glide time dialled in: jump the pitch but still no re-attack.
+            currentFrequency = freq;
+            osc2CurrentFreq  = osc2TargetFreq;
+            portamentoCoeff  = 1.0f;
+        }
+    }
+
     void noteOff()
     {
         ampEnv.noteOff();

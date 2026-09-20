@@ -61,6 +61,9 @@ public:
     // Callbacks
     std::function<void(int note, float velocity)> onNoteOn;
     std::function<void(int note)> onNoteOff;
+    /** Glide step: hand the sounding voice over to a new pitch instead of
+        starting a second one. See JunoVoice::glideTo. */
+    std::function<void(int fromNote, int toNote, float velocity)> onNoteGlide;
 
     void setSampleRate(double sr) { sampleRate = sr; }
 
@@ -302,49 +305,93 @@ public:
         }
     }
 
-    // Randomize pattern using musical scales (not chromatic)
+    // ------------------------------------------------------------------
+    //  Randomize — a musical line, not noise inside a scale.
+    //
+    //  The previous version drew an octave (0 or +12) AND a scale degree
+    //  independently for EVERY step, and switched each step on with a coin
+    //  flip. That gives no melodic contour at all: the line leaps an octave
+    //  at random, and with 20% of steps gliding, the portamento smeared
+    //  across those leaps — which is what made it sound out of tune rather
+    //  than musical.
+    //
+    //  Now: a rhythmic template decides WHICH steps play, the pitch follows
+    //  a random walk that prefers stepwise motion, the octave changes only
+    //  deliberately on a downbeat, and glide is reserved for small intervals.
+    // ------------------------------------------------------------------
     void randomize()
     {
-        // Minor pentatonic scale intervals (root-relative semitones)
-        // Sounds good for both Belgian (acid/dark) and Italian (melodic/emotional)
-        static const int minorPenta[] = { 0, 3, 5, 7, 10 }; // 5 notes
-        static const int minorScale[] = { 0, 2, 3, 5, 7, 8, 10 }; // 7 notes (natural minor)
+        static const int minorPenta[] = { 0, 3, 5, 7, 10 };            // 5 notes
+        static const int minorScale[] = { 0, 2, 3, 5, 7, 8, 10 };      // natural minor
+        static const int roots[] = { 36, 38, 40, 41, 43, 45 };         // C2..A2
 
-        // Pick a random root: C, D, E, F, G, A (avoid awkward keys)
-        static const int roots[] = { 36, 38, 40, 41, 43, 45 }; // C2, D2, E2, F2, G2, A2
+        // Rhythms that actually groove, instead of a per-step coin flip.
+        static const unsigned short rhythms[] = {
+            0xAAAA,  // 1010101010101010 — straight eighths
+            0x8A8A,  // 1000101010001010 — sparse, syncopated
+            0xBABA,  // 1011101010111010 — driving
+            0xA2A2,  // 1010001010100010 — laid back
+            0xFAFA   // 1111101011111010 — busy 303 roll
+        };
 
-        // Lock RNG access — randomize() called from GUI thread, protects state corruption
         juce::SpinLock::ScopedLockType lock(rngLock);
-
         auto randInt = [this](int n) { return std::uniform_int_distribution<int>(0, n - 1)(rng); };
-        int root = roots[randInt(6)];
 
-        // 70% chance minor pentatonic (safer), 30% full minor (more melodic variety)
-        bool usePenta = randInt(10) < 7;
-        const int* scale = usePenta ? minorPenta : minorScale;
-        int scaleLen = usePenta ? 5 : 7;
+        const int  root     = roots[randInt(6)];
+        const bool usePenta = randInt(10) < 7;
+        const int* scale    = usePenta ? minorPenta : minorScale;
+        const int  scaleLen = usePenta ? 5 : 7;
+
+        const unsigned short mask = rhythms[randInt(5)];
+
+        int degree   = 0;       // current scale degree
+        int octave   = 0;       // 0 or 1 — moves rarely, on purpose
+        int prevNote = root;
 
         for (int i = 0; i < MAX_STEPS; ++i)
         {
-            int octaveOffset = randInt(2) * 12; // 0 or +12
-            int scaleNote = scale[randInt(scaleLen)];
-            steps[i].active.store((randInt(3)) != 0, std::memory_order_release);
-            steps[i].note.store(root + octaveOffset + scaleNote, std::memory_order_release);
-            steps[i].velocity.store(0.5f + randInt(50) / 100.0f, std::memory_order_release);
-            steps[i].glide.store((randInt(5)) == 0, std::memory_order_release);    // 20% glide
-            steps[i].accent.store((randInt(4)) == 0, std::memory_order_release);   // 25% accent
+            const bool on = ((mask >> (15 - i)) & 1) != 0;
+            steps[i].active.store(on, std::memory_order_release);
+
+            if (!on)
+            {
+                steps[i].glide.store(false, std::memory_order_release);
+                steps[i].accent.store(false, std::memory_order_release);
+                continue;
+            }
+
+            // Stepwise-biased random walk: mostly repeat or move one degree.
+            const int r = randInt(10);
+            const int delta = (r < 3) ? 0 : (r < 6) ? 1 : (r < 8) ? -1 : (r < 9) ? 2 : -2;
+            degree += delta;
+            while (degree >= scaleLen) { degree -= scaleLen; octave = 1; }
+            while (degree <  0)        { degree += scaleLen; octave = 0; }
+
+            // An octave drop is a musical decision, so only on a downbeat.
+            if ((i % 8) == 0 && randInt(4) == 0)
+                octave = 0;
+
+            const int note = root + octave * 12 + scale[degree];
+            steps[i].note.store(note, std::memory_order_release);
+            steps[i].velocity.store(0.55f + randInt(35) / 100.0f, std::memory_order_release);
+
+            // Glide only makes sense between neighbouring pitches, and sparingly.
+            const int interval = std::abs(note - prevNote);
+            steps[i].glide.store(interval > 0 && interval <= 4 && randInt(7) == 0,
+                                 std::memory_order_release);
+
+            // Accents land on the beat far more often than off it.
+            steps[i].accent.store(((i % 4) == 0) ? (randInt(2) == 0) : (randInt(8) == 0),
+                                  std::memory_order_release);
+
+            prevNote = note;
         }
-        // Force step 1 and 9 (downbeats) to be active with root note
+
+        // Anchor the downbeat on the root so the pattern has a home.
         steps[0].active.store(true, std::memory_order_release);
         steps[0].note.store(root, std::memory_order_release);
         steps[0].accent.store(true, std::memory_order_release);
-        int numStepsVal = numSteps.load(std::memory_order_acquire);
-        if (numStepsVal > 8)
-        {
-            steps[8].active.store(true, std::memory_order_release);
-            steps[8].note.store(root + 12, std::memory_order_release);
-            steps[8].accent.store(true, std::memory_order_release);
-        }
+        steps[0].glide.store(false, std::memory_order_release);
     }
 
     // ============================================================
@@ -647,13 +694,22 @@ private:
         // If glide, just change pitch (don't retrigger envelope)
         bool isGlide = stepGlide && lastNoteOn >= 0;
 
-        if (!isGlide && lastNoteOn >= 0 && onNoteOff)
-            onNoteOff(lastNoteOn);
-
         float vel = stepAccent ? std::min(1.0f, stepVelocity * 1.4f) : stepVelocity;
 
-        if (onNoteOn)
-            onNoteOn(stepNote, vel);
+        if (isGlide && onNoteGlide)
+        {
+            // Hands the sounding voice to the new pitch. Previously this path
+            // sent a bare onNoteOn, which grabbed a second voice and left the
+            // first one sustaining with no matching note-off.
+            onNoteGlide(lastNoteOn, stepNote, vel);
+        }
+        else
+        {
+            if (lastNoteOn >= 0 && onNoteOff)
+                onNoteOff(lastNoteOn);
+            if (onNoteOn)
+                onNoteOn(stepNote, vel);
+        }
 
         lastNoteOn = stepNote;
         gateActive = true;

@@ -1346,8 +1346,19 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
         seqStepButtons[i].setClickingTogglesState(true);
         seqStepButtons[i].setComponentID("seqStep");
         seqStepButtons[i].onClick = [this, i]() {
-            selectedStep = i;  // Select this step for editing
-            processor.getSequencer().toggleStep(i);
+            // Selecting and toggling used to happen on the SAME click, so you
+            // could never pick a step to edit without also flipping it on/off.
+            // Now: clicking an inactive step turns it on and selects it;
+            // clicking an active step selects it; clicking the step that is
+            // ALREADY selected turns it off. Deactivating stays deliberate.
+            auto& seq = processor.getSequencer();
+            const bool wasSelected = (selectedStep == i);
+            const bool wasActive   = seq.isStepActive(i);
+
+            if (!wasActive)            seq.setStepActive(i, true);
+            else if (wasSelected)      seq.setStepActive(i, false);
+
+            selectedStep = i;
             // Sync Glide/Accent buttons to newly selected step
             const auto& stepData = processor.getSequencer().getStep(i);
             seqGlideButton.setToggleState(stepData.glide, juce::dontSendNotification);
@@ -2204,15 +2215,18 @@ void TsyganatorEditor::paint(juce::Graphics& g)
 
         // Step number at top
         {
-            g.setFont(juce::Font(juce::FontOptions("JetBrains Mono", 9.0f, juce::Font::bold)));
-            g.setColour(textColour.withAlpha(0.55f));   // was 0.3 at 8pt plain: unreadable
-            g.drawText(juce::String(i + 1), stepX + 2, SEQ_GRID_Y + 4, stepWidth - 6, 10,
-                       juce::Justification::centred);
+            // Index in the TOP-LEFT corner, not centred. Centred above a
+            // centred note name, both containing digits, made the two read as
+            // one value — "is that the octave?". Position now separates them.
+            g.setFont(juce::Font(juce::FontOptions("JetBrains Mono", 8.0f, juce::Font::plain)));
+            g.setColour(textColour.withAlpha(0.45f));
+            g.drawText(juce::String(i + 1), stepX + 5, SEQ_GRID_Y + 4, stepWidth - 10, 10,
+                       juce::Justification::topLeft);
         }
 
         // Note name — centered in step
         {
-            g.setFont(juce::Font(juce::FontOptions("JetBrains Mono", 11.0f, juce::Font::bold)));
+            g.setFont(juce::Font(juce::FontOptions("JetBrains Mono", 12.5f, juce::Font::bold)));
             if (step.active)
             {
                 g.setColour(juce::Colours::white.withAlpha(0.95f));
