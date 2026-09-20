@@ -780,14 +780,29 @@ juce::Typeface::Ptr TsyganatorLookAndFeel::getTypefaceForFont(const juce::Font& 
 namespace Grid
 {
     constexpr int margin = 14, colW = 100, gutter = 12;
+
+    // Vertical rhythm. Rows used to sit 4 px apart while columns were 6-10 px
+    // apart, which is what made the layout feel cramped top-to-bottom. The
+    // gutter is now the same 12 px in both directions.
+    constexpr int headerH = 72;
+    constexpr int row1Y = headerH + gutter;            //  84
+    constexpr int row1H = 150;
+    constexpr int row2Y = row1Y + row1H + gutter;      // 246
+    constexpr int row2H = 104;
+    constexpr int row3Y = row2Y + row2H + gutter;      // 362
+    constexpr int row3H = 212;
+    constexpr int footerY = row3Y + row3H + gutter;    // 586
+    constexpr int windowH = footerY + 26 + gutter;     // 624
+
     constexpr int x (int col)  { return margin + col * (colW + gutter); }
     constexpr int w (int span) { return span * colW + (span - 1) * gutter; }
 }
 
 namespace SeqGrid
 {
-    constexpr int cardX = 14,  cardY = 342, cardW = 1332, cardH = 212;
-    constexpr int gridY = 424, gridH = 116;      // step cells
+    constexpr int cardX = Grid::margin, cardY = Grid::row3Y,
+                  cardW = Grid::w(12),  cardH = Grid::row3H;
+    constexpr int gridY = Grid::row3Y + 82, gridH = 116;   // step cells
     constexpr int ledY  = gridY - 9;             // LED row above the cells
     constexpr int firstX = 25, usableW = 1320;   // step strip
 }
@@ -804,7 +819,7 @@ static juce::String midiNoteName(int note)
 TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     : juce::AudioProcessorEditor(&p), processor(p)
 {
-    setSize(1360, 600);
+    setSize(1360, Grid::windowH);
     setOpaque(true);  // Tells host this component is fully opaque (no transparent pixels).
 
     // P36c v7 — REVERTED OpenGL (v6). It improved the wedge slightly
@@ -1744,9 +1759,9 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     g.fillAll(bodyTop);
     {
         juce::ColourGradient bodyGrad(bodyTop, 0.0f, 72.0f,
-                                       bodyBot, 0.0f, 600.0f, false);
+                                       bodyBot, 0.0f, (float)Grid::windowH, false);
         g.setGradientFill(bodyGrad);
-        g.fillRect(0, 72, 1360, 528);
+        g.fillRect(0, Grid::headerH, 1360, Grid::windowH - Grid::headerH);
     }
 
     // ----- 2. TOP BAR — poster-inspired royal navy / plum gradient -----
@@ -1756,7 +1771,7 @@ void TsyganatorEditor::paint(juce::Graphics& g)
 
         juce::ColourGradient topGrad(topBarTop, 0.0f, 0.0f, topBarBot, 0.0f, 72.0f, false);
         g.setGradientFill(topGrad);
-        g.fillRect(0, 0, 1360, 72);
+        g.fillRect(0, 0, 1360, Grid::headerH);
 
         // Top edge highlight (subtle, catches light)
         g.setColour(juce::Colours::white.withAlpha(0.08f));
@@ -1813,7 +1828,17 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     // Each card: drop shadow → gradient body → filled header bar →
     // header title → top highlight → outline. Sized to wrap each row's
     // existing component cluster (no resized() changes required).
-    auto drawCard = [&](juce::Rectangle<float> rect, const juce::String& title)
+    // `prominent` keeps the old fully-filled bar. Eleven saturated bars all
+    // shouting at the same volume gave the panel no hierarchy, so only the
+    // sequencer — the full-width centrepiece — keeps it; every other card gets
+    // a quiet wash with a hairline rule under the title.
+    // Title colour for the quiet bar has to contrast with the WASHED header,
+    // which differs per theme. Measured: navy on Belgian 4.91:1, light rose on
+    // Italian 5.97:1 (the accent rose would only have reached 2.85:1).
+    const auto quietTitle = isBelgian ? juce::Colour(0xFF1E3F8C) : juce::Colour(0xFFE8B0C8);
+
+    auto drawCard = [&](juce::Rectangle<float> rect, const juce::String& title,
+                        bool prominent = false)
     {
         constexpr float cornerR = 4.0f;
         constexpr float headerH = 16.0f;
@@ -1828,16 +1853,22 @@ void TsyganatorEditor::paint(juce::Graphics& g)
         g.setGradientFill(cardGrad);
         g.fillRoundedRectangle(rect, cornerR);
 
-        // Filled header bar (rounded at the top, squared at the bottom)
         juce::Rectangle<float> header(rect.getX(), rect.getY(), rect.getWidth(), headerH);
-        g.setColour(headerFill);
+        g.setColour(prominent ? headerFill : headerFill.withAlpha(0.20f));
         g.fillRoundedRectangle(header, cornerR);
         g.fillRect(header.getX(), header.getY() + headerH - cornerR,
                    header.getWidth(), cornerR);
 
-        // Header title
+        if (! prominent)
+        {
+            // Hairline rule so the section still reads as delimited.
+            g.setColour(headerFill.withAlpha(0.70f));
+            g.fillRect(header.getX() + 1.0f, header.getBottom() - 1.0f,
+                       header.getWidth() - 2.0f, 1.0f);
+        }
+
         g.setFont(juce::Font(juce::FontOptions("Outfit", 10.5f, juce::Font::bold)));
-        g.setColour(headerText);
+        g.setColour(prominent ? headerText : quietTitle);
         g.drawText(title, header.toNearestInt(), juce::Justification::centred);
 
         // Top highlight just under the header
@@ -1851,25 +1882,25 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     };
 
     // Row 1 (y=80, h=150) — fader-based oscillators / filter / ADSRs
-    drawCard({ (float)Grid::x(0),  80.0f, (float)Grid::w(3), 150.0f }, "OSC-1");
-    drawCard({ (float)Grid::x(3),  80.0f, (float)Grid::w(3), 150.0f }, "OSC-2");
-    drawCard({ (float)Grid::x(6),  80.0f, (float)Grid::w(2), 150.0f }, "FILTER");
-    drawCard({ (float)Grid::x(8),  80.0f, (float)Grid::w(2), 150.0f }, "FILTER ADSR");
-    drawCard({ (float)Grid::x(10), 80.0f, (float)Grid::w(2), 150.0f }, "AMP ADSR");
+    drawCard({ (float)Grid::x(0),  (float)Grid::row1Y, (float)Grid::w(3), (float)Grid::row1H }, "OSC-1");
+    drawCard({ (float)Grid::x(3),  (float)Grid::row1Y, (float)Grid::w(3), (float)Grid::row1H }, "OSC-2");
+    drawCard({ (float)Grid::x(6),  (float)Grid::row1Y, (float)Grid::w(2), (float)Grid::row1H }, "FILTER");
+    drawCard({ (float)Grid::x(8),  (float)Grid::row1Y, (float)Grid::w(2), (float)Grid::row1H }, "FILTER ADSR");
+    drawCard({ (float)Grid::x(10), (float)Grid::row1Y, (float)Grid::w(2), (float)Grid::row1H }, "AMP ADSR");
 
     // Row 2 (y=234, h=104) — P44 reflow:
     //   PERFORMANCE | LFO | VINTAGE | CHORUS | MASTER
     // Vintage and Chorus are SEPARATE cards (P39 merge was reverted —
     // user wanted clear independent sections with standard card headers).
-    drawCard({ (float)Grid::x(0),  234.0f, (float)Grid::w(3), 104.0f }, "PERFORMANCE");
-    drawCard({ (float)Grid::x(3),  234.0f, (float)Grid::w(3), 104.0f }, "LFO");
-    drawCard({ (float)Grid::x(6),  234.0f, (float)Grid::w(2), 104.0f }, "VINTAGE");
-    drawCard({ (float)Grid::x(8),  234.0f, (float)Grid::w(2), 104.0f }, "CHORUS");
-    drawCard({ (float)Grid::x(10), 234.0f, (float)Grid::w(2), 104.0f }, "MASTER");
+    drawCard({ (float)Grid::x(0),  (float)Grid::row2Y, (float)Grid::w(3), (float)Grid::row2H }, "PERFORMANCE");
+    drawCard({ (float)Grid::x(3),  (float)Grid::row2Y, (float)Grid::w(3), (float)Grid::row2H }, "LFO");
+    drawCard({ (float)Grid::x(6),  (float)Grid::row2Y, (float)Grid::w(2), (float)Grid::row2H }, "VINTAGE");
+    drawCard({ (float)Grid::x(8),  (float)Grid::row2Y, (float)Grid::w(2), (float)Grid::row2H }, "CHORUS");
+    drawCard({ (float)Grid::x(10), (float)Grid::row2Y, (float)Grid::w(2), (float)Grid::row2H }, "MASTER");
 
     // Row 3 (y=342, h=82) — play mode / sequencer controls / sample
     drawCard({ (float)SeqGrid::cardX, (float)SeqGrid::cardY,
-               (float)SeqGrid::cardW, (float)SeqGrid::cardH }, "SEQUENCER");
+               (float)SeqGrid::cardW, (float)SeqGrid::cardH }, "SEQUENCER", true);
 
     // Row 4 (y=428, h=126) — step sequencer grid
 
@@ -1882,28 +1913,28 @@ void TsyganatorEditor::paint(juce::Graphics& g)
         const auto ribbonText = isBelgian ? juce::Colour(0xFFEFD03A) : juce::Colour(0xFFE8B0C8);
 
         g.setColour(ribbonCol);
-        g.fillRect(0, 560, 1360, 28);
+        g.fillRect(0, Grid::footerY - 1, 1360, 28);
 
         g.setColour(accent.withAlpha(0.55f));
-        g.fillRect(0, 588, 1360, 1);
+        g.fillRect(0, Grid::footerY + 27, 1360, 1);
 
         g.setFont(juce::Font(juce::FontOptions("Outfit", 10.0f, juce::Font::bold)));
 
         // Left: version
         g.setColour(ribbonText.withAlpha(0.78f));
-        g.drawText("TSYGANATOR v1.0", 20, 561, 240, 26, juce::Justification::centredLeft);
+        g.drawText("TSYGANATOR v1.0", 20, Grid::footerY, 240, 26, juce::Justification::centredLeft);
 
         // Center: mode name
         const auto modeName = isBelgian ? juce::String("HARD BELGIAN MODE")
                                         : juce::String("SAD ITALIAN MODE");
         g.setColour(ribbonText.withAlpha(0.60f));
-        g.drawText(modeName, 480, 561, 400, 26, juce::Justification::centred);
+        g.drawText(modeName, 480, Grid::footerY, 400, 26, juce::Justification::centred);
 
         // Right: signature + voice specs (replaces wasted footer space)
         g.setColour(ribbonText.withAlpha(0.70f));
         g.drawText(juce::CharPointer_UTF8(
                        "Made with \xe2\x99\xa5 in Brussels & Roma  \xc2\xb7  6-voice poly  \xc2\xb7  Juno filter"),
-                   820, 561, 520, 26, juce::Justification::centredRight);
+                   820, Grid::footerY, 520, 26, juce::Justification::centredRight);
     }
 
     // === MASCOT: Animated drawing ===
@@ -2335,7 +2366,7 @@ void TsyganatorEditor::paintOverChildren(juce::Graphics& g)
 
         // Dim SEQUENCER card (Row 3) when not in seq modes
         if (!seqActive_dm)
-            paintDimmedZone({ 392.0f, 364.0f, 954.0f, 44.0f });
+            paintDimmedZone({ 392.0f, (float)Grid::row3Y + 22.0f, 954.0f, 44.0f });
 
         // Dim STEP SEQUENCER card (Row 4) when not in seq modes
         if (!seqActive_dm)
@@ -2410,7 +2441,7 @@ void TsyganatorEditor::layoutRow1()
     // P33: shift fader y 110 → 117 so the label–fader group is vertically
     // CENTERED in the body (top margin = bottom margin = 7 px) instead of
     // top-aligned to the header. labelAboveY = y − 14 → 103.
-    int y = 117;
+    int y = Grid::row1Y + 37;   // label+fader group centred in the card body
     int h = 106;
 
     // OSC1 (7 faders ~42px each) — labels ABOVE faders, below section title
@@ -2463,7 +2494,7 @@ void TsyganatorEditor::layoutRow1()
     int filterKnobSpacing = 68;
     int filterX = Grid::x(6) + (Grid::w(2) - 194) / 2; // 3 knobs = 194
     // Vertically center knob+label (74px) in usable panel area (96-230 = 134px)
-    int fkY = 96 + (134 - (filterKnobSize + 16)) / 2;  // knob+gap+label centered in panel
+    int fkY = Grid::row1Y + 16 + (134 - (filterKnobSize + 16)) / 2;  // knob+gap+label centered in panel
     cutoffSlider.setBounds(filterX, fkY, filterKnobSize, filterKnobSize);
     cutoffLabel.setBounds(filterX, fkY + filterKnobSize + 2, filterKnobSize, 14);
     resonanceSlider.setBounds(filterX + filterKnobSpacing, fkY, filterKnobSize, filterKnobSize);
@@ -2514,7 +2545,7 @@ void TsyganatorEditor::layoutRow2()
     // content. Centred in 88 px body → top margin = 6 → knob top y = 256.
     // Knob CENTRE lands at 286, matching the Master 68 px knob centre
     // (252 + 34 = 286). All Row 2 knob centres line up visually.
-    const int y           = 256;
+    const int y           = Grid::row2Y + 22;
     const int h           = 60;
     // P32: button TOP positioned so the button CENTRE lands at the knob
     // centre (y + h/2 = 286). Same trick for the chorus toggleY below.
@@ -2604,7 +2635,7 @@ void TsyganatorEditor::layoutRow2()
         // in the same row are 60 px, so it now matches them exactly.
         const int masterKnobSize = 60;
         const int masterKnobX    = masterX + (masterW - masterKnobSize) / 2;
-        const int masterKnobY    = 256;   // centre stays at 286, aligned with the row
+        const int masterKnobY    = Grid::row2Y + 22;   // centre stays at 286, aligned with the row
         masterGainSlider.setBounds(masterKnobX, masterKnobY, masterKnobSize, masterKnobSize);
         masterGainLabel.setBounds(-100, -100, 1, 1);
         const int dbW = 100;
@@ -2626,7 +2657,7 @@ void TsyganatorEditor::layoutRow3()
     // Usable area: 360-420 = 60px. Center 32px buttons → y = 360 + (60-32)/2 = 374.
     // Inside the merged SEQUENCER card: header 342-358, controls 366-398,
     // captions 400-411, LEDs 415, grid 424-540, 14 px bottom margin.
-    int y = 366;
+    int y = Grid::row3Y + 24;
     int h = 32;
 
     // Play mode buttons — within PLAY MODE panel (x=14, w=374, right edge=388).
