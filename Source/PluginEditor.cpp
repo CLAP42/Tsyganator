@@ -1875,6 +1875,15 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     // Italian 5.97:1 (the accent rose would only have reached 2.85:1).
     const auto quietTitle = isBelgian ? juce::Colour(0xFF1E3F8C) : juce::Colour(0xFFE8B0C8);
 
+    // Header bar = a LIGHTNESS step of the card, hue and saturation untouched.
+    // Washing the accent into the card instead mixed two near-complementary
+    // hues and produced mud: navy at 20% over the gold card dropped saturation
+    // from 87% to 51% (khaki), and rose over plum from 45% to 37%.
+    // Measured here: same hue, same saturation, 7 points of lightness.
+    //   Belgian  card #F2D74A -> bar #F0D029   title contrast 6.41:1
+    //   Italian  card #3A1F52 -> bar #4C296C   title contrast 6.23:1
+    const auto headerBar = isBelgian ? juce::Colour(0xFFF0D029) : juce::Colour(0xFF4C296C);
+
     auto drawCard = [&](juce::Rectangle<float> rect, const juce::String& title,
                         bool prominent = false)
     {
@@ -1892,15 +1901,16 @@ void TsyganatorEditor::paint(juce::Graphics& g)
         g.fillRoundedRectangle(rect, cornerR);
 
         juce::Rectangle<float> header(rect.getX(), rect.getY(), rect.getWidth(), headerH);
-        g.setColour(prominent ? headerFill : headerFill.withAlpha(0.20f));
+        g.setColour(prominent ? headerFill : headerBar);
         g.fillRoundedRectangle(header, cornerR);
         g.fillRect(header.getX(), header.getY() + headerH - cornerR,
                    header.getWidth(), cornerR);
 
         if (! prominent)
         {
-            // Hairline rule so the section still reads as delimited.
-            g.setColour(headerFill.withAlpha(0.70f));
+            // Single accent hairline: the only place the accent colour appears
+            // on a quiet card, which is what keeps it crisp.
+            g.setColour(headerFill.withAlpha(0.85f));
             g.fillRect(header.getX() + 1.0f, header.getBottom() - 1.0f,
                        header.getWidth() - 2.0f, 1.0f);
         }
@@ -1909,10 +1919,8 @@ void TsyganatorEditor::paint(juce::Graphics& g)
         g.setColour(prominent ? headerText : quietTitle);
         g.drawText(title, header.toNearestInt(), juce::Justification::centred);
 
-        // Top highlight just under the header
-        g.setColour(juce::Colours::white.withAlpha(0.10f));
-        g.fillRect(rect.getX() + 1.0f, rect.getY() + headerH,
-                   rect.getWidth() - 2.0f, 1.0f);
+        // (The white highlight that used to sit here made a third parallel line
+        //  under the header, right below the bar edge and the accent rule.)
 
         // Inner bottom shade — completes the bevel so the card reads as a
         // raised faceplate rather than a flat rectangle.
@@ -2804,38 +2812,14 @@ void TsyganatorEditor::syncMode()
         l.setColour(juce::Label::textColourId, labelCol);
     };
     // OSC1
-    setLabelColor(sawLevelLabel); setLabelColor(pulseLevelLabel); setLabelColor(triangleLevelLabel);
-    setLabelColor(subLevelLabel); setLabelColor(noiseLevelLabel); setLabelColor(pulseWidthLabel);
-    setLabelColor(osc1VolumeLabel);
-    // OSC2
-    setLabelColor(osc2SawLabel); setLabelColor(osc2PulseLabel); setLabelColor(osc2TriangleLabel);
-    setLabelColor(osc2PWLabel); setLabelColor(osc2FineLabel); setLabelColor(osc2VolumeLabel);
-    setLabelColor(osc2OctaveLabel);
-    // Filter
-    setLabelColor(cutoffLabel); setLabelColor(resonanceLabel); setLabelColor(filterEnvAmountLabel);
-    // Filter ADSR
-    setLabelColor(filterAttackLabel); setLabelColor(filterDecayLabel);
-    setLabelColor(filterSustainLabel); setLabelColor(filterReleaseLabel);
-    // Amp ADSR
-    setLabelColor(ampAttackLabel); setLabelColor(ampDecayLabel);
-    setLabelColor(ampSustainLabel); setLabelColor(ampReleaseLabel);
-    // Performance
-    setLabelColor(unisonDetuneLabel); setLabelColor(keyTrackingLabel); setLabelColor(portamentoLabel);
-    // Effects (P26 fix: vintageAmountLabel was missing — appeared invisible
-    // yellow-on-yellow in Belgian mode)
-    setLabelColor(globalFineTuneLabel);
-    setLabelColor(vintageAmountLabel);
-    // LFO
-    setLabelColor(lfoRateLabel); setLabelColor(lfoDepthLabel);
-    setLabelColor(lfoWaveformLabel); setLabelColor(lfoDestinationLabel);
-    setLabelColor(lfoSyncLabel);
-    // Master
-    setLabelColor(masterDbLabel);
-    // Seq
-    setLabelColor(seqNumStepsLabel);
-    setLabelColor(sequencerLabel);
-    setLabelColor(seqSwingLabel);
-    setLabelColor(seqGateLengthLabel);
+    // Every Label child gets the theme colour. This used to be a hand-written
+    // list of ~35 names, so any label added later silently kept styleLabel's
+    // hard-coded Italian rose — which is exactly what happened to the new
+    // sequencer captions: pink text on the gold Belgian panel.
+    for (auto* child : getChildren())
+        if (auto* l = dynamic_cast<juce::Label*>(child))
+            setLabelColor(*l);
+
 
     // Set ComboBox text colours to match theme (yellow on blue / pink on purple)
     auto comboTextCol = isBelgian ? juce::Colour(0xFFEFD03A) : juce::Colour(0xFFE8B0C8);
