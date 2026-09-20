@@ -430,98 +430,98 @@ public:
 
             // 0: "Antwerpen Acid" — Phuture / "Acid Tracks" (1987). Cm 303.
             { "Antwerpen Acid", "belgian", {
-                {36,true,false,true},  {36,false,false,false}, {48,true,true,false},  {46,true,false,false},
-                {43,true,false,false}, {43,false,false,false}, {48,true,true,false},  {48,true,false,true},
-                {39,true,false,false}, {36,true,false,false},  {39,true,false,false}, {43,true,false,false},
-                {39,true,true,false},  {36,true,false,false},  {39,true,true,false},  {36,true,false,false}
+                {36,true,false,true}    , {36,false,false,false}  , {48,true,false,false}   , {46,true,true,false},
+                {43,true,true,true}     , {43,false,false,false}  , {48,true,false,true}    , {48,true,false,false},
+                {39,true,false,true}    , {36,true,true,false}    , {39,false,false,false}  , {43,true,false,false},
+                {39,true,true,true}     , {36,true,false,false}   , {39,true,true,false}    , {36,true,false,false}
             }},
 
             // 1: "Tsygan 242" — Front 242 / "Headhunter" (1988). Cm industrial stomp.
             { "Tsygan 242", "belgian", {
-                {36,true,false,true},  {36,true,false,false},  {36,false,false,false}, {36,true,false,false},
-                {43,true,false,true},  {36,true,false,false},  {36,false,false,false}, {43,true,false,false},
-                {36,true,false,true},  {39,true,false,false},  {36,true,false,false},  {43,true,false,false},
-                {36,true,false,true},  {41,true,false,false},  {43,true,false,false},  {36,true,false,false}
+                {36,true,false,true}    , {36,true,false,false}   , {36,false,false,false}  , {36,true,false,false},
+                {43,true,true,true}     , {36,true,false,false}   , {36,false,false,false}  , {43,true,false,false},
+                {36,true,false,true}    , {39,true,false,false}   , {36,false,false,false}  , {43,true,false,false},
+                {36,true,false,true}    , {41,true,false,false}   , {43,false,false,false}  , {36,true,false,true}
             }},
 
             // 2: "Chant Nitzer" — Nitzer Ebb / "Join in the Chant" (1986). F#m drone.
             { "Chant Nitzer", "belgian", {
-                {42,true,false,true},  {42,true,false,false},  {42,true,false,false},  {49,true,false,false},
-                {42,true,false,true},  {42,true,false,false},  {49,true,false,false},  {42,true,false,false},
-                {42,true,false,true},  {42,true,false,false},  {42,true,false,false},  {49,true,false,false},
-                {42,true,false,true},  {42,true,false,false},  {45,true,false,false},  {49,true,false,false}
+                {42,true,false,true}    , {42,false,false,false}  , {42,false,false,false}  , {49,true,true,true},
+                {42,true,false,false}   , {42,true,false,false}   , {49,false,false,false}  , {42,true,false,true},
+                {42,true,false,false}   , {42,true,false,false}   , {42,false,false,false}  , {49,true,false,true},
+                {42,true,false,false}   , {42,true,false,false}   , {45,true,false,true}    , {49,true,false,false}
             }},
 
             // 3: "Flesh Wallon" — A Split Second / "Flesh" (1986). Dm New Beat sync.
             { "Flesh Wallon", "belgian", {
-                {38,true,false,true},  {38,false,false,false}, {38,true,false,false},  {38,false,false,false},
-                {41,true,false,true},  {41,false,false,false}, {38,true,false,false},  {45,true,false,false},
-                {38,true,false,true},  {38,false,false,false}, {38,true,false,false},  {38,false,false,false},
-                {48,true,false,true},  {45,true,false,false},  {41,true,false,false},  {38,true,false,false}
+                {38,true,false,true}    , {38,false,false,false}  , {38,true,false,false}   , {38,false,false,false},
+                {41,true,true,true}     , {41,false,false,false}  , {38,true,false,false}   , {45,true,false,true},
+                {38,true,false,false}   , {38,false,false,false}  , {38,true,false,false}   , {38,false,false,false},
+                {48,true,false,true}    , {45,true,false,false}   , {41,true,false,false}   , {38,true,false,true}
             }},
 
             // 4: "Confettis Sauvages" — Confetti's / "The Sound of C" (1988). C hardstop.
             { "Confettis Sauvages", "belgian", {
-                {36,true,false,true},  {36,false,false,false}, {36,true,false,false},  {36,false,false,false},
-                {43,true,false,true},  {43,false,false,false}, {43,true,false,false},  {43,false,false,false},
-                {36,true,false,true},  {40,true,false,false},  {36,true,false,false},  {43,true,false,false},
-                {48,true,false,true},  {43,true,false,false},  {40,true,false,false},  {36,true,false,false}
+                {36,true,false,true}    , {36,false,false,false}  , {36,true,false,false}   , {36,false,false,false},
+                {43,true,true,true}     , {43,false,false,false}  , {43,true,false,false}   , {43,false,false,false},
+                {36,true,false,true}    , {40,true,false,false}   , {36,false,false,false}  , {43,true,false,true},
+                {48,true,false,false}   , {43,true,false,true}    , {40,false,false,false}  , {36,true,false,false}
             }},
 
             // 5: "Sit on Speculoos" — Lords of Acid / "I Sit On Acid" (1988). Am acid+slides.
             { "Sit on Speculoos", "belgian", {
-                {45,true,false,true},  {45,true,false,false},  {57,true,true,false},   {43,true,false,false},
-                {40,true,false,true},  {45,true,true,false},   {48,true,false,false},  {40,true,true,false},
-                {45,true,false,true},  {45,true,true,false},   {52,true,false,false},  {48,true,true,false},
-                {45,true,false,true},  {43,true,true,false},   {40,true,false,false},  {45,true,true,false}
+                {45,true,false,true}    , {45,true,false,false}   , {57,true,false,false}   , {43,false,false,false},
+                {40,true,false,true}    , {45,true,true,false}    , {48,true,true,false}    , {40,false,false,false},
+                {45,true,false,false}   , {45,true,false,true}    , {52,true,true,false}    , {48,false,false,false},
+                {45,true,false,true}    , {43,true,true,false}    , {40,true,false,false}   , {45,false,false,false}
             }},
 
             // 6: "Der Bruxellois" — DAF / "Der Mussolini" (1981). Em proto-EBM 8ths.
             { "Der Bruxellois", "belgian", {
-                {40,true,false,true},  {40,true,false,false},  {40,true,false,false},  {40,true,false,false},
-                {40,true,false,true},  {40,true,false,false},  {47,true,false,false},  {40,true,false,false},
-                {40,true,false,true},  {40,true,false,false},  {40,true,false,false},  {47,true,false,false},
-                {40,true,false,true},  {43,true,false,false},  {47,true,false,false},  {40,true,false,false}
+                {40,true,false,true}    , {40,false,false,false}  , {40,true,false,false}   , {40,true,false,false},
+                {40,false,false,false}  , {40,true,false,false}   , {47,false,false,false}  , {40,true,false,false},
+                {40,true,false,false}   , {40,false,false,false}  , {40,true,false,false}   , {47,true,true,true},
+                {40,false,false,false}  , {43,true,false,true}    , {47,true,false,false}   , {40,false,false,false}
             }},
 
             // 7: "Ninos Bruxelles" — Liaisons Dangereuses / "Los Niños del Parque" (1981). Bm proto-EBM.
             { "Ninos Bruxelles", "belgian", {
-                {47,true,false,true},  {47,true,false,false},  {50,true,false,false},  {47,true,false,false},
-                {42,true,false,true},  {47,true,false,false},  {50,true,false,false},  {54,true,false,false},
-                {47,true,false,true},  {47,true,false,false},  {50,true,false,false},  {47,true,false,false},
-                {45,true,false,true},  {50,true,false,false},  {54,true,false,false},  {47,true,false,false}
+                {47,true,false,true}    , {47,true,false,false}   , {50,false,false,false}  , {47,true,false,false},
+                {42,true,true,true}     , {47,true,false,false}   , {50,false,false,false}  , {54,true,false,true},
+                {47,true,true,false}    , {47,true,false,false}   , {50,false,false,false}  , {47,true,false,false},
+                {45,true,false,false}   , {50,true,false,false}   , {54,false,false,false}  , {47,true,false,false}
             }},
 
             // 8: "Quelle Heure Love" — KLF / "What Time Is Love" (1988). Dm acid bounce.
             { "Quelle Heure Love", "belgian", {
-                {38,true,false,true},  {38,true,false,false},  {50,true,true,false},   {38,true,false,false},
-                {45,true,false,true},  {38,true,false,false},  {50,true,false,false},  {45,true,false,false},
-                {38,true,false,true},  {41,true,false,false},  {45,true,true,false},   {50,true,false,false},
-                {45,true,false,true},  {41,true,false,false},  {50,true,false,false},  {38,true,false,false}
+                {38,false,false,false}  , {38,false,false,false}  , {50,true,false,false}   , {38,true,false,false},
+                {45,true,true,true}     , {38,false,false,false}  , {50,true,false,false}   , {45,true,false,false},
+                {38,true,false,true}    , {41,true,true,false}    , {45,true,false,true}    , {50,true,false,false},
+                {45,true,false,true}    , {41,false,false,false}  , {50,true,false,false}   , {38,true,false,false}
             }},
 
             // 9: "Mons Motion" — Cubic 22 / "Night in Motion" (1991). Gm ascending.
             { "Mons Motion", "belgian", {
-                {43,true,false,true},  {43,true,false,false},  {46,true,false,false},  {50,true,false,false},
-                {43,true,false,true},  {46,true,false,false},  {48,true,false,false},  {50,true,false,false},
-                {43,true,false,true},  {46,true,false,false},  {50,true,false,false},  {53,true,false,false},
-                {43,true,false,true},  {50,true,false,false},  {46,true,false,false},  {43,true,false,false}
+                {43,true,false,true}    , {43,false,false,false}  , {46,true,true,false}    , {50,false,false,false},
+                {43,true,false,false}   , {46,true,false,false}   , {48,true,true,false}    , {50,false,false,false},
+                {43,true,false,false}   , {46,true,false,false}   , {50,true,false,false}   , {53,true,true,true},
+                {43,true,false,false}   , {50,true,false,false}   , {46,true,false,false}   , {43,true,false,false}
             }},
 
             // 10: "Tsygan Assimilate" — Skinny Puppy / "Assimilate" (1985). Am EBM crawl.
             { "Tsygan Assimilate", "belgian", {
-                {45,true,false,true},  {45,false,false,false}, {45,true,false,false},  {45,false,false,false},
-                {48,true,false,true},  {48,false,false,false}, {45,true,false,false},  {43,true,false,false},
-                {40,true,false,true},  {40,false,false,false}, {40,true,false,false},  {43,true,false,false},
-                {45,true,false,true},  {43,true,false,false},  {40,true,false,false},  {45,true,false,false}
+                {45,true,false,true}    , {45,false,false,false}  , {45,true,false,false}   , {45,false,false,false},
+                {48,true,true,true}     , {48,false,false,false}  , {45,true,false,false}   , {43,true,false,true},
+                {40,true,false,false}   , {40,false,false,false}  , {40,true,false,false}   , {43,true,false,true},
+                {45,true,false,false}   , {43,false,false,false}  , {40,true,false,false}   , {45,true,false,false}
             }},
 
             // 11: "Move Le Boudin" — Erotic Dissidents / "Move Your Ass…" (1988). Cm groove.
             { "Move Le Boudin", "belgian", {
-                {36,true,false,true},  {36,false,false,false}, {36,true,false,false},  {39,true,false,false},
-                {36,true,false,true},  {43,true,false,false},  {36,true,false,false},  {46,true,false,false},
-                {36,true,false,true},  {39,true,false,false},  {43,true,false,false},  {46,true,true,false},
-                {48,true,false,true},  {46,true,false,false},  {43,true,false,false},  {36,true,false,false}
+                {36,true,false,true}    , {36,false,false,false}  , {36,false,false,false}  , {39,true,true,false},
+                {36,false,false,false}  , {43,true,false,true}    , {36,true,false,false}   , {46,true,false,false},
+                {36,false,false,false}  , {39,true,false,true}    , {43,true,false,false}   , {46,true,true,false},
+                {48,true,false,false}   , {46,true,false,true}    , {43,true,false,false}   , {36,true,false,false}
             }},
 
             // ============================================================
@@ -530,98 +530,98 @@ public:
 
             // 12: "Saturnia Heat" — Moroder / Donna Summer "I Feel Love" (1977). C octave-bounce.
             { "Saturnia Heat", "italian", {
-                {36,true,false,true},  {48,true,false,false},  {36,true,false,false},  {48,true,false,false},
-                {36,true,false,true},  {48,true,false,false},  {36,true,false,false},  {48,true,false,false},
-                {36,true,false,true},  {48,true,false,false},  {36,true,false,false},  {48,true,false,false},
-                {36,true,false,true},  {48,true,false,false},  {36,true,false,false},  {48,true,false,false}
+                {36,true,false,true}    , {48,true,false,false}   , {36,true,false,false}   , {48,true,false,false},
+                {36,true,false,true}    , {48,true,false,false}   , {36,true,false,false}   , {48,false,false,false},
+                {36,true,false,false}   , {48,true,false,true}    , {36,true,false,false}   , {48,true,false,false},
+                {36,true,false,true}    , {48,true,false,false}   , {36,true,false,false}   , {48,false,false,false}
             }},
 
             // 13: "Roma Sauvage" — Baltimora / "Tarzan Boy" (1985). Em syncopated hook.
             { "Roma Sauvage", "italian", {
-                {40,true,false,true},  {40,false,false,false}, {40,true,false,false},  {43,true,false,false},
-                {47,true,false,true},  {47,false,false,false}, {47,true,false,false},  {43,true,false,false},
-                {40,true,false,true},  {40,false,false,false}, {50,true,false,false},  {47,true,false,false},
-                {45,true,false,true},  {43,true,false,false},  {40,true,false,false},  {38,true,false,false}
+                {40,true,false,true}    , {40,false,false,false}  , {40,true,false,false}   , {43,true,true,false},
+                {47,true,false,true}    , {47,false,false,false}  , {47,true,false,false}   , {43,true,false,false},
+                {40,true,false,true}    , {40,false,false,false}  , {50,true,false,false}   , {47,true,true,true},
+                {45,true,false,false}   , {43,true,false,true}    , {40,false,false,false}  , {38,true,false,false}
             }},
 
             // 14: "Dolce Tsygan" — Ryan Paris / "Dolce Vita" (1983). Am walking bass.
             { "Dolce Tsygan", "italian", {
-                {45,true,false,true},  {45,true,false,false},  {52,true,false,false},  {48,true,false,false},
-                {43,true,false,true},  {43,true,false,false},  {50,true,false,false},  {47,true,false,false},
-                {41,true,false,true},  {41,true,false,false},  {48,true,false,false},  {45,true,false,false},
-                {40,true,false,true},  {43,true,false,false},  {47,true,false,false},  {45,true,false,false}
+                {45,true,false,true}    , {45,true,false,false}   , {52,true,true,false}    , {48,false,false,false},
+                {43,true,false,true}    , {43,true,false,false}   , {50,true,false,false}   , {47,false,false,false},
+                {41,true,false,false}   , {41,true,false,true}    , {48,true,false,false}   , {45,false,false,false},
+                {40,true,false,true}    , {43,true,false,false}   , {47,true,false,false}   , {45,false,false,false}
             }},
 
             // 15: "Auto-Controllo" — Raf / "Self Control" (1984). Am dramatic octave.
             { "Auto-Controllo", "italian", {
-                {45,true,false,true},  {57,true,false,false},  {45,true,false,false},  {57,true,false,false},
-                {41,true,false,true},  {53,true,false,false},  {41,true,false,false},  {53,true,false,false},
-                {43,true,false,true},  {55,true,false,false},  {43,true,false,false},  {55,true,false,false},
-                {40,true,false,true},  {52,true,false,false},  {45,true,false,false},  {57,true,false,false}
+                {45,true,false,true}    , {57,true,false,false}   , {45,true,false,false}   , {57,false,false,false},
+                {41,true,false,true}    , {53,true,false,false}   , {41,true,false,false}   , {53,false,false,false},
+                {43,true,false,true}    , {55,true,false,false}   , {43,true,false,false}   , {55,false,false,false},
+                {40,true,false,true}    , {52,true,false,false}   , {45,true,false,true}    , {57,false,false,false}
             }},
 
             // 16: "Ragazzi Estate" — Sabrina / "Boys (Summertime Love)" (1987). Am-F-C-G.
             { "Ragazzi Estate", "italian", {
-                {45,true,false,true},  {45,true,false,false},  {52,true,false,false},  {48,true,false,false},
-                {41,true,false,true},  {41,true,false,false},  {48,true,false,false},  {45,true,false,false},
-                {48,true,false,true},  {48,true,false,false},  {55,true,false,false},  {52,true,false,false},
-                {43,true,false,true},  {43,true,false,false},  {50,true,false,false},  {47,true,false,false}
+                {45,true,false,true}    , {45,false,false,false}  , {52,false,false,false}  , {48,true,true,false},
+                {41,true,false,true}    , {41,false,false,false}  , {48,false,false,false}  , {45,true,false,true},
+                {48,true,false,false}   , {48,true,false,true}    , {55,true,true,false}    , {52,true,false,false},
+                {43,true,false,true}    , {43,true,false,false}   , {50,true,false,false}   , {47,true,false,false}
             }},
 
             // 17: "Cervello Futuro" — Den Harrow / "Future Brain" (1985). Dm-Bb-C-A sequence.
             { "Cervello Futuro", "italian", {
-                {38,true,false,true},  {38,true,false,false},  {41,true,false,false},  {45,true,false,false},
-                {46,true,false,true},  {46,true,false,false},  {50,true,false,false},  {53,true,false,false},
-                {48,true,false,true},  {48,true,false,false},  {52,true,false,false},  {55,true,false,false},
-                {45,true,false,true},  {45,true,false,false},  {49,true,false,false},  {52,true,false,false}
+                {38,true,false,true}    , {38,false,false,false}  , {41,true,true,false}    , {45,false,false,false},
+                {46,true,false,true}    , {46,false,false,false}  , {50,true,false,false}   , {53,true,false,false},
+                {48,true,true,true}     , {48,true,false,false}   , {52,true,false,true}    , {55,true,false,false},
+                {45,true,false,true}    , {45,true,false,false}   , {49,true,false,false}   , {52,false,false,false}
             }},
 
             // 18: "Pasta al Chopin" — Gazebo / "I Like Chopin" (1983). Cm descending ballad.
             { "Pasta al Chopin", "italian", {
-                {48,true,false,true},  {48,false,false,false}, {46,true,false,false},  {46,false,false,false},
-                {44,true,false,true},  {44,false,false,false}, {43,true,false,false},  {43,false,false,false},
-                {41,true,false,true},  {41,false,false,false}, {39,true,false,false},  {39,false,false,false},
-                {38,true,false,true},  {36,true,false,false},  {36,false,false,false}, {43,true,false,false}
+                {48,true,false,true}    , {48,false,false,false}  , {46,true,true,false}    , {46,false,false,false},
+                {44,true,false,true}    , {44,false,false,false}  , {43,true,false,false}   , {43,false,false,false},
+                {41,true,false,true}    , {41,false,false,false}  , {39,true,true,false}    , {39,false,false,false},
+                {38,true,false,true}    , {36,true,false,false}   , {36,false,false,false}  , {43,true,false,false}
             }},
 
             // 19: "Parlare Sporco" — Klein & MBO / "Dirty Talk" (1982). Em rhythmic.
             { "Parlare Sporco", "italian", {
-                {40,true,false,true},  {40,false,false,false}, {40,true,false,false},  {43,true,false,false},
-                {38,true,false,true},  {38,false,false,false}, {38,true,false,false},  {41,true,false,false},
-                {36,true,false,true},  {36,false,false,false}, {36,true,false,false},  {39,true,false,false},
-                {38,true,false,true},  {38,false,false,false}, {47,true,false,false},  {40,true,false,false}
+                {40,true,false,true}    , {40,false,false,false}  , {40,true,false,false}   , {43,true,true,false},
+                {38,true,false,true}    , {38,false,false,false}  , {38,true,false,false}   , {41,true,false,true},
+                {36,true,false,false}   , {36,false,false,false}  , {36,true,false,false}   , {39,true,false,false},
+                {38,true,false,true}    , {38,false,false,false}  , {47,true,false,false}   , {40,true,false,false}
             }},
 
             // 20: "La Notte" — Valerie Dore / "The Night" (1984). Am dramatic Am-F-G-Em.
             { "La Notte", "italian", {
-                {45,true,false,true},  {45,true,false,false},  {57,true,false,false},  {52,true,false,false},
-                {41,true,false,true},  {41,true,false,false},  {53,true,false,false},  {48,true,false,false},
-                {43,true,false,true},  {43,true,false,false},  {55,true,false,false},  {50,true,false,false},
-                {40,true,false,true},  {40,true,false,false},  {43,true,false,false},  {47,true,false,false}
+                {45,true,false,true}    , {45,false,false,false}  , {57,true,false,false}   , {52,true,true,false},
+                {41,true,false,true}    , {41,false,false,false}  , {53,true,false,false}   , {48,true,false,false},
+                {43,true,false,true}    , {43,false,false,false}  , {55,true,false,true}    , {50,true,false,false},
+                {40,true,false,true}    , {40,true,false,false}   , {43,false,false,false}  , {47,true,false,false}
             }},
 
             // 21: "Chiamami" — Spagna / "Call Me" (1986). F#m Hi-NRG 4-on-floor.
             { "Chiamami", "italian", {
-                {42,true,false,true},  {42,true,false,false},  {45,true,false,false},  {49,true,false,false},
-                {49,true,false,true},  {44,true,false,false},  {47,true,false,false},  {49,true,false,false},
-                {38,true,false,true},  {38,true,false,false},  {42,true,false,false},  {45,true,false,false},
-                {40,true,false,true},  {40,true,false,false},  {44,true,false,false},  {47,true,false,false}
+                {42,true,false,true}    , {42,true,false,false}   , {45,true,true,false}    , {49,false,false,false},
+                {49,true,false,true}    , {44,true,false,false}   , {47,true,true,false}    , {49,false,false,false},
+                {38,true,false,false}   , {38,true,false,true}    , {42,true,false,false}   , {45,false,false,false},
+                {40,true,false,true}    , {40,true,false,false}   , {44,true,false,false}   , {47,false,false,false}
             }},
 
             // 22: "Pulsar Cosmica" — Hipnosis / "Pulstar" (Vangelis cover, 1983). Cm cosmic sequencer.
             { "Pulsar Cosmica", "italian", {
-                {36,true,false,true},  {43,true,false,false},  {48,true,false,false},  {51,true,false,false},
-                {55,true,false,true},  {51,true,false,false},  {48,true,false,false},  {43,true,false,false},
-                {36,true,false,true},  {43,true,false,false},  {46,true,false,false},  {51,true,false,false},
-                {55,true,false,true},  {53,true,false,false},  {50,true,false,false},  {46,true,false,false}
+                {36,true,false,true}    , {43,false,false,false}  , {48,true,false,false}   , {51,true,true,false},
+                {55,false,false,false}  , {51,true,false,false}   , {48,true,false,false}   , {43,true,false,false},
+                {36,false,false,false}  , {43,true,false,false}   , {46,true,true,true}     , {51,true,false,false},
+                {55,true,false,true}    , {53,true,true,false}    , {50,true,false,false}   , {46,true,false,false}
             }},
 
             // 23: "Calma Albert" — Albert One / "Take It Easy" (1986). Bbm Hi-NRG octave driver.
             { "Calma Albert", "italian", {
-                {46,true,false,true},  {58,true,false,false},  {46,true,false,false},  {58,true,false,false},
-                {43,true,false,true},  {55,true,false,false},  {43,true,false,false},  {55,true,false,false},
-                {44,true,false,true},  {56,true,false,false},  {44,true,false,false},  {56,true,false,false},
-                {41,true,false,true},  {53,true,false,false},  {46,true,false,false},  {58,true,false,false}
+                {46,true,false,true}    , {58,true,false,false}   , {46,true,false,false}   , {58,false,false,false},
+                {43,true,false,true}    , {55,true,false,false}   , {43,true,false,false}   , {55,false,false,false},
+                {44,true,false,true}    , {56,true,false,false}   , {44,true,false,false}   , {56,false,false,false},
+                {41,true,false,true}    , {53,true,false,false}   , {46,true,false,true}    , {58,false,false,false}
             }}
         };
 
