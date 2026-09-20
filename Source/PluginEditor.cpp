@@ -561,6 +561,31 @@ void TsyganatorLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button
     }
 }
 
+void TsyganatorLookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)
+{
+    if (label.isBeingEdited())
+    {
+        LookAndFeel_V4::drawLabel(g, label);
+        return;
+    }
+
+    const auto area = label.getLocalBounds().reduced(1, 0);
+    const auto text = label.getText();
+    if (text.isEmpty())
+        return;
+
+    g.setFont(label.getFont());
+
+    // Engraved relief: on a light panel the shade falls below the glyph, on a
+    // dark one a highlight does the same job (you cannot darken near-black).
+    g.setColour(darkSurface ? juce::Colours::white.withAlpha(0.13f)
+                            : juce::Colours::black.withAlpha(0.22f));
+    g.drawText(text, area.translated(0, 1), label.getJustificationType(), true);
+
+    g.setColour(label.findColour(juce::Label::textColourId));
+    g.drawText(text, area, label.getJustificationType(), true);
+}
+
 void TsyganatorLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button,
                                           bool isMouseOverButton, bool isButtonDown)
 {
@@ -1887,6 +1912,12 @@ void TsyganatorEditor::paint(juce::Graphics& g)
         // Top highlight just under the header
         g.setColour(juce::Colours::white.withAlpha(0.10f));
         g.fillRect(rect.getX() + 1.0f, rect.getY() + headerH,
+                   rect.getWidth() - 2.0f, 1.0f);
+
+        // Inner bottom shade — completes the bevel so the card reads as a
+        // raised faceplate rather than a flat rectangle.
+        g.setColour(juce::Colours::black.withAlpha(isBelgian ? 0.16f : 0.30f));
+        g.fillRect(rect.getX() + 1.0f, rect.getBottom() - 2.0f,
                    rect.getWidth() - 2.0f, 1.0f);
 
         // Card outline (last)

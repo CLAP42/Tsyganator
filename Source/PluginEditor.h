@@ -71,6 +71,11 @@ public:
                              const juce::Colour& backgroundColour,
                              bool isMouseOverButton, bool isButtonDown) override;
 
+    /** Captions are drawn twice — a 1 px offset shade under the glyphs, then
+        the text itself — so they read as engraved into the panel rather than
+        printed on top of it. */
+    void drawLabel(juce::Graphics&, juce::Label&) override;
+
     void drawButtonText(juce::Graphics&, juce::TextButton&,
                        bool isMouseOverButton, bool isButtonDown) override;
 
