@@ -2383,7 +2383,6 @@ void TsyganatorEditor::paintOverChildren(juce::Graphics& g)
     // Painted OVER children so it visually dims buttons, knobs, and labels too.
     {
         auto playMode = processor.getPlayMode();
-        bool seqActive_dm = (playMode == TsyganatorProcessor::ModeSeqSynth);
 
         // P28 — single, subtle dim wash aligned exactly to the section
         // cards drawn in paint(). The card outline already delimits each
@@ -2401,30 +2400,50 @@ void TsyganatorEditor::paintOverChildren(juce::Graphics& g)
             g.fillRoundedRectangle(r, 4.0f);   // same corner radius as the card
         };
 
-        // Dim SEQUENCER card (Row 3) when not in seq modes
-        if (!seqActive_dm)
-            // Derived from the real component bounds. The old literal x=392
-            // was left over from an earlier arrangement of the strip and, once
-            // the groups moved, cut straight through the arp mode combo.
-            paintDimmedZone(stepMinusButton.getBounds()
-                              .getUnion(seqPatternCombo.getBounds())
-                              .getUnion(seqPatternLabel.getBounds())
-                              .getUnion(sequencerLabel.getBounds())
-                              .expanded(6).toFloat());
+        // Dimming is laid out as bands that share their edges exactly: the
+        // control band ends on the same y the grid band starts, and the arp
+        // band ends on the same x the sequencer band starts. Overlapping
+        // translucent rectangles would double-darken the seam, and a gap
+        // between them would leave an undimmed sliver.
+        const float ctrlTop    = (float) (Grid::row3Y + 24 - 6);
+        const float ctrlBottom = (float) (SeqGrid::gridY - 8);
+        const float gridBottom = (float) (SeqGrid::gridY + SeqGrid::gridH + 4);
+        const float rightEdge  = (float) (SeqGrid::cardX + SeqGrid::cardW - 4);
+        const float arpLeft    = (float) (arpRateCombo.getX() - 6);
+        const float seqLeft    = (float) (stepMinusButton.getX() - 8);
 
-        // Dim STEP SEQUENCER card (Row 4) when not in seq modes
-        if (!seqActive_dm)
-            paintDimmedZone({ (float)SeqGrid::cardX + 4.0f, (float)SeqGrid::gridY - 12.0f,
-                              (float)SeqGrid::cardW - 8.0f, (float)SeqGrid::gridH + 16.0f });
+        auto dimControls = [&](float left)
+        {
+            paintDimmedZone({ left, ctrlTop, rightEdge - left, ctrlBottom - ctrlTop });
+        };
+        auto dimGrid = [&]
+        {
+            paintDimmedZone({ (float) SeqGrid::cardX + 4.0f, ctrlBottom,
+                              (float) SeqGrid::cardW - 8.0f, gridBottom - ctrlBottom });
+        };
 
-        // Dim the arpeggiator's rate/mode combos when the arp is not running.
-        // They sit inside the PLAY MODE card and were the only controls in the
-        // whole editor that ignored the mode-dimming convention.
-        if (playMode != TsyganatorProcessor::ModeArp)
-            paintDimmedZone(arpRateCombo.getBounds()
-                              .getUnion(arpModeCombo.getBounds())
-                              .expanded(3).toFloat());
+        switch (playMode)
+        {
+            case TsyganatorProcessor::ModeOff:
+                // Nothing generates notes: arp settings, sequencer controls and
+                // the grid all go quiet. The play-mode buttons stay lit — they
+                // are how you leave this state.
+                dimControls (arpLeft);
+                dimGrid();
+                break;
 
+            case TsyganatorProcessor::ModeArp:
+                // Arp settings stay live; everything sequencer-specific dims.
+                dimControls (seqLeft);
+                dimGrid();
+                break;
+
+            case TsyganatorProcessor::ModeSeqSynth:
+                // Sequencer is live; only the arp settings are inactive.
+                paintDimmedZone({ arpLeft, ctrlTop, seqLeft - arpLeft,
+                                  ctrlBottom - ctrlTop });
+                break;
+        }
     }
 
     // (P44: EFFECTS split-header overpaint removed — VINTAGE and CHORUS
