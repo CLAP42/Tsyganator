@@ -728,45 +728,27 @@ void TsyganatorProcessor::handleMidiEvent (const juce::MidiMessage& msg, int sam
                 break;
 
             case ModeSeqSynth:
-                // 303-style: keyboard sets transpose offset for sequencer
+                // Keystep-style transpose: a played note sets the sequence's
+                // root and it STAYS there. Releasing does not reset it — you
+                // move the sequence by playing another note, and playing the
+                // reference root (C4) brings it back to the written pitches.
                 if (msg.isNoteOn())
                 {
-                    int oldOffset = seqTransposeOffset.load(std::memory_order_relaxed);
-                    seqTransposeHeldNote = msg.getNoteNumber();
-                    int newOffset = msg.getNoteNumber() - seqBaseNote;
+                    const int oldOffset = seqTransposeOffset.load(std::memory_order_relaxed);
+                    const int newOffset = msg.getNoteNumber() - seqBaseNote;
                     seqTransposeOffset.store(newOffset, std::memory_order_relaxed);
 
-                    // Immediately retrigger current note with new transposition
-                    // so the user hears the change without waiting for next step
-                    int rawNote = sequencer.getLastPlayingNote();
-                    if (sequencer.isPlaying() && rawNote >= 0)
+                    // Retrigger the sounding step at the new pitch so the change
+                    // is heard immediately rather than at the next step.
+                    const int rawNote = sequencer.getLastPlayingNote();
+                    if (sequencer.isPlaying() && rawNote >= 0 && newOffset != oldOffset)
                     {
-                        int oldNote = std::clamp(rawNote + oldOffset, 0, 127);
-                        int newNote = std::clamp(rawNote + newOffset, 0, 127);
-                        handleSequencerNoteOff(oldNote);
-                        handleSequencerNoteOn(newNote, 0.8f);
+                        handleSequencerNoteOff(std::clamp(rawNote + oldOffset, 0, 127));
+                        handleSequencerNoteOn (std::clamp(rawNote + newOffset, 0, 127), 0.8f);
                     }
                 }
-                else if (msg.isNoteOff())
-                {
-                    // Only reset if releasing the currently held transpose note
-                    if (msg.getNoteNumber() == seqTransposeHeldNote)
-                    {
-                        int oldOffset = seqTransposeOffset.load(std::memory_order_relaxed);
-                        seqTransposeOffset.store(0, std::memory_order_relaxed);
-                        seqTransposeHeldNote = -1;
-
-                        // Retrigger at original pitch
-                        int rawNote = sequencer.getLastPlayingNote();
-                        if (sequencer.isPlaying() && rawNote >= 0)
-                        {
-                            int oldNote = std::clamp(rawNote + oldOffset, 0, 127);
-                            int newNote = std::clamp(rawNote, 0, 127);
-                            handleSequencerNoteOff(oldNote);
-                            handleSequencerNoteOn(newNote, 0.8f);
-                        }
-                    }
-                }
+                // Note-off intentionally does nothing here: the transposition
+                // persists until the next note is played.
                 break;
 
             case ModeSeqSample:

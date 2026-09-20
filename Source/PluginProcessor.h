@@ -136,6 +136,8 @@ public:
 
     // Sequencer access
     StepSequencer& getSequencer() { return sequencer; }
+    /** Semitone offset applied to every sequencer step by the last played note. */
+    int getSeqTransposeOffset() const { return seqTransposeOffset.load(std::memory_order_relaxed); }
 
     // Arpeggiator access
     Arpeggiator& getArpeggiator() { return arpeggiator; }
@@ -227,7 +229,6 @@ private:
     // 303-style keyboard transpose for sequencer
     std::atomic<int> seqTransposeOffset{0};    // semitones offset from keyboard input
     int seqBaseNote = 60;                       // C4 = reference root for transpose calculation
-    int seqTransposeHeldNote = -1;              // currently held note for transpose (track releases)
 
     // Pitch bend and mod wheel state
     float pitchBendSemitones = 0.0f;           // current pitch bend in semitones (-2..+2)

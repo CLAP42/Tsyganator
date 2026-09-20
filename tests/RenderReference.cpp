@@ -358,6 +358,53 @@ std::vector<Scenario> buildScenarios()
         [] (double progress) { return progress < 0.60; }    // transport stops at 60%
     });
 
+    // ---- 6. Sequencer transpose from the keyboard (Keystep-style) ----
+    //  Every step holds the same note, so the sounding pitch is easy to measure.
+    //  A MIDI note 5 semitones above the reference root (C4 = 60) is held from
+    //  1.5 s to 3.0 s: the sequence must rise a fourth, then drop back.
+    s.push_back ({
+        "seq_transpose",
+"Sequencer transposed by MIDI notes; transposition persists after release",
+        48000.0, 512, 4.0,
+        [] (TsyganatorProcessor& p)
+        {
+            neutralBase (p);
+            p.setPlayMode (TsyganatorProcessor::ModeSeqSynth);
+            setParam (p, "sawLevel", 1.0f);
+            setParam (p, "cutoff", 4000.0f);
+            setParam (p, "resonance", 0.1f);
+            setParam (p, "ampAttack", 0.002f);
+            setParam (p, "ampSustain", 1.0f);
+            setParam (p, "ampRelease", 0.05f);
+            setParam (p, "seqNumSteps", 4.0f);
+            setParam (p, "seqRate", 3.0f);       // 1/8
+            setParam (p, "seqGateLength", 0.9f);
+
+            auto& sq = p.getSequencer();
+            sq.clearAllSteps();
+            for (int i = 0; i < 4; ++i)
+            {
+                sq.setStepNote (i, 48);          // C3 everywhere
+                sq.setStepActive (i, true);
+                sq.setStepVelocity (i, 0.9f);
+            }
+        },
+        [] (double sr)
+        {
+            std::vector<MidiEvent> e;
+            // +5 semitones, released early — the sequence must STAY transposed.
+            e.push_back ({ (int) (1.00 * sr), juce::MidiMessage::noteOn  (1, 65, 0.8f) });
+            e.push_back ({ (int) (1.30 * sr), juce::MidiMessage::noteOff (1, 65) });
+            // Playing the reference root brings it back to the written pitches.
+            e.push_back ({ (int) (2.60 * sr), juce::MidiMessage::noteOn  (1, 60, 0.8f) });
+            e.push_back ({ (int) (2.90 * sr), juce::MidiMessage::noteOff (1, 60) });
+            return e;
+        },
+        nullptr,
+        120.0,
+        [] (double) { return true; }
+    });
+
     return s;
 }
 

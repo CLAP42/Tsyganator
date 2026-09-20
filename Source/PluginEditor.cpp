@@ -2124,6 +2124,7 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     int stepWidth = 1320 / numSteps;
 
     auto& seq = processor.getSequencer();
+    const int seqTranspose = processor.getSeqTransposeOffset();
 
     for (int i = 0; i < numSteps; ++i)
     {
@@ -2230,7 +2231,9 @@ void TsyganatorEditor::paint(juce::Graphics& g)
             if (step.active)
             {
                 g.setColour(juce::Colours::white.withAlpha(0.95f));
-                g.drawText(midiNoteName(step.note), stepX + 1, SEQ_GRID_Y + 34,
+                // Show what is actually SOUNDING: a played note transposes the
+                // whole sequence, so the written pitch is no longer what you hear.
+                g.drawText(midiNoteName(step.note + seqTranspose), stepX + 1, SEQ_GRID_Y + 34,
                            stepWidth - 4, 14, juce::Justification::centred);
             }
             else
