@@ -568,6 +568,30 @@ void TsyganatorLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& 
     if (button.getComponentID() == "seqStep")
         return;
 
+    // Preset navigation: draw a real triangle rather than a "<" / ">" glyph.
+    // The text characters were thin, small and optically off-centre, which is
+    // what made these two buttons look unfinished next to the rest of the UI.
+    if (button.getComponentID() == "presetNav")
+    {
+        auto b = button.getLocalBounds().toFloat();
+        const float cx = b.getCentreX(), cy = b.getCentreY();
+        const float w = 4.4f, hh = 6.0f;
+        const bool back = button.getButtonText() == "<";
+
+        juce::Path tri;
+        if (back) { tri.startNewSubPath(cx + w * 0.55f, cy - hh);
+                    tri.lineTo(cx + w * 0.55f, cy + hh);
+                    tri.lineTo(cx - w,         cy); }
+        else      { tri.startNewSubPath(cx - w * 0.55f, cy - hh);
+                    tri.lineTo(cx - w * 0.55f, cy + hh);
+                    tri.lineTo(cx + w,         cy); }
+        tri.closeSubPath();
+
+        g.setColour(currentScheme.text.withAlpha(button.isEnabled() ? 0.95f : 0.4f));
+        g.fillPath(tri);
+        return;
+    }
+
     // INIT button: accent-colored text
     if (button.getComponentID() == "initBtn")
     {
@@ -1489,6 +1513,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     addAndMakeVisible(presetLabel);
 
     presetPrevButton.setButtonText("<");
+    presetPrevButton.setComponentID("presetNav");
     presetPrevButton.onClick = [this]() {
         int idx = processor.getCurrentProgram();
         if (idx > 0)
@@ -1507,6 +1532,7 @@ TsyganatorEditor::TsyganatorEditor(TsyganatorProcessor& p)
     addAndMakeVisible(presetCombo);
 
     presetNextButton.setButtonText(">");
+    presetNextButton.setComponentID("presetNav");
     presetNextButton.onClick = [this]() {
         int idx = processor.getCurrentProgram();
         int numPrograms = processor.getNumPrograms();
@@ -1753,6 +1779,12 @@ void TsyganatorEditor::paint(juce::Graphics& g)
         const auto& logoImg = isBelgian ? logoBelgian : logoItalian;
         if (logoImg.isValid())
         {
+            // drawImage composites with the context's CURRENT opacity, and the
+            // accent line above left it at 0.65 via setColour(...withAlpha()).
+            // The logo had therefore always been drawn at 65% opacity, blending
+            // with the header behind it — measured as a ~54 point saturation
+            // loss against the mascot. Reset it explicitly.
+            g.setOpacity(1.0f);
             g.drawImage(logoImg, logoBoxX, logoBoxY, logoBoxW, logoBoxH,
                         0, 0, logoImg.getWidth(), logoImg.getHeight());
         }
@@ -1903,10 +1935,20 @@ void TsyganatorEditor::paint(juce::Graphics& g)
             g.setColour(juce::Colour(0xFF1E3F8C));
             g.fillEllipse(mascotCX - outerR, mascotCY - outerR, outerR * 2.0f, outerR * 2.0f);
 
+            // The medallion's navy only reaches 1.25:1 against the header
+            // gradient behind it, so the disc barely separated from the bar.
+            // A brighter rim gives it an edge without touching the fill.
+            g.setColour(juce::Colour(0xFF4C77D8).withAlpha(0.85f));
+            g.drawEllipse(mascotCX - outerR, mascotCY - outerR,
+                          outerR * 2.0f, outerR * 2.0f, 1.6f);
+
             // 12 orbiting gold 5-pointed stars (rotate with smileyAngle)
             float starOrbitR = outerR * 0.73f;
             float starSize = outerR * 0.14f;
-            g.setColour(juce::Colour(0xFFEFD03A));   // gold matching logo / headerText
+            // Harmonised with the logo and the acid smiley. The three yellows
+            // used to sit at 46.5 / 49.7 / 57.1 degrees of hue, which is what
+            // made the logo read as washed out next to the mascot.
+            g.setColour(juce::Colour(0xFFF6D623));
 
             for (int i = 0; i < 12; ++i)
             {
@@ -2617,11 +2659,16 @@ void TsyganatorEditor::layoutRow3()
 
     // Swing & Gate knobs — square bounds to avoid arc overflow.
     int knobSz = h;
-    int knobY = y - 2;
-    seqSwingSlider.setBounds(500, knobY, knobSz + 6, knobSz + 6);
-    seqSwingLabel.setBounds(498, knobY + knobSz + 10, knobSz + 10, 11);
-    seqGateLengthSlider.setBounds(552, knobY, knobSz + 6, knobSz + 6);
-    seqGateLengthLabel.setBounds(550, knobY + knobSz + 10, knobSz + 10, 11);
+    // The Swing/Gate captions used to sit at knobY + knobSz + 10 = 414 and are
+    // 11 px tall, so they ended at 425 — one pixel PAST the card's bottom edge
+    // (342 + 82 = 424) — and 6 px lower than the "Steps" caption beside them.
+    // Knobs pulled up 2 px and slimmed by 2 px so both captions can share the
+    // same baseline as "Steps" with 5 px of clearance inside the card.
+    int knobY = y - 4;
+    seqSwingSlider.setBounds(500, knobY, knobSz + 4, knobSz + 4);
+    seqSwingLabel.setBounds(498, y + h + 2, knobSz + 10, 11);
+    seqGateLengthSlider.setBounds(552, knobY, knobSz + 4, knobSz + 4);
+    seqGateLengthLabel.setBounds(550, y + h + 2, knobSz + 10, 11);
 
     // Action buttons
     seqRandButton.setBounds(604, y, 44, h);
