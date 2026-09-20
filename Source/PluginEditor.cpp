@@ -2403,7 +2403,14 @@ void TsyganatorEditor::paintOverChildren(juce::Graphics& g)
 
         // Dim SEQUENCER card (Row 3) when not in seq modes
         if (!seqActive_dm)
-            paintDimmedZone({ 392.0f, (float)Grid::row3Y + 22.0f, 954.0f, 44.0f });
+            // Derived from the real component bounds. The old literal x=392
+            // was left over from an earlier arrangement of the strip and, once
+            // the groups moved, cut straight through the arp mode combo.
+            paintDimmedZone(stepMinusButton.getBounds()
+                              .getUnion(seqPatternCombo.getBounds())
+                              .getUnion(seqPatternLabel.getBounds())
+                              .getUnion(sequencerLabel.getBounds())
+                              .expanded(6).toFloat());
 
         // Dim STEP SEQUENCER card (Row 4) when not in seq modes
         if (!seqActive_dm)
