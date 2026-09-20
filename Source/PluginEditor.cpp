@@ -2640,10 +2640,10 @@ void TsyganatorEditor::layoutRow2()
         // col 2: Sync button (top) + Wave combo (bottom) — stacked
         lfoSyncButton.setBounds   (col(2), y + 2,  comboW1, 24);
         lfoWaveformCombo.setBounds(col(2), y + 32, comboW1, 22);
-        lfoWaveformLabel.setBounds(col(2), y + 56, comboW1, 14);
+        lfoWaveformLabel.setBounds(col(2), y + h + 2, comboW1, 14);      // shared caption baseline
         // col 3: Dest combo (bottom half only, top deliberately empty)
         lfoDestinationCombo.setBounds(col(3), y + 32, comboW2, 22);
-        lfoDestinationLabel.setBounds(col(3), y + 56, comboW2, 14);
+        lfoDestinationLabel.setBounds(col(3), y + h + 2, comboW2, 14);   // shared caption baseline
     }
 
     // -------- VINTAGE card (x=672..862, w=190) — P44 split from EFFECTS --------
@@ -2711,68 +2711,67 @@ void TsyganatorEditor::layoutRow3()
 {
     // Control strip of the merged SEQUENCER card.
     //
-    // It used to end at x=1018 inside a card running to 1346 — 328 px of dead
-    // space on the right. Controls are now chunkier and spread across the full
-    // width in eight groups separated by an even 16 px, with a full word
-    // underneath each group instead of "Clr", "N+", "V-".
+    // Seven groups, 16 px apart. Inside a group everything shares one gap (8 px)
+    // AND one width, because controls that look identical must be spaced and
+    // sized identically — Random/Clear/Glide/Accent previously ran 96/80/76/84
+    // wide with 8/18/8 gaps, which reads as a mistake rather than as grouping.
     const int y  = Grid::row3Y + 24;
     const int h  = 32;
-    const int cy = y + h + 2;          // caption baseline, shared by every group
+    const int cy = y + h + 2;
     const int cH = 11;
+    const int gIn = 8;                 // inside a group
 
     auto caption = [&](juce::Label& l, int x, int w) { l.setBounds(x, cy, w, cH); };
 
-    // A — play mode -------------------------------------------------------
-    // One gap inside a group (8 px), one between groups (18 px). The strip
-    // previously mixed 0, 6, 8 and 16 px internally and 16 or 20 between.
+    // A — play mode (24..240) ---------------------------------------------
     playOffButton.setBounds     ( 24, y, 56, h);
     playArpButton.setBounds     ( 88, y, 56, h);
     playSeqSynthButton.setBounds(152, y, 88, h);
     caption(seqPlayModeLabel, 24, 216);
 
-    // B — arpeggiator. The rate combo was 50 px and showed "..." because
-    //     "1/16" plus the arrow did not fit.
-    arpRateCombo.setBounds(258, y + 2, 66, 28);
-    arpModeCombo.setBounds(332, y + 2, 76, 28);
-    caption(arpLabel, 258, 150);
+    // B — arpeggiator (256..416), both combos the same width ---------------
+    arpRateCombo.setBounds(256, y + 2, 76, 28);
+    arpModeCombo.setBounds(340, y + 2, 76, 28);
+    caption(arpLabel, 256, 160);
     arpModeLabel.setBounds(-100, -100, 1, 1);
     arpRateLabel.setBounds(-100, -100, 1, 1);
 
-    // C — step count ------------------------------------------------------
-    stepMinusButton.setBounds  (426, y, 34, h);
-    seqNumStepsLabel.setBounds (460, y, 40, h);
-    stepPlusButton.setBounds   (500, y, 34, h);
-    caption(sequencerLabel, 426, 108);
+    // C — step count (432..540), one control so the parts touch ------------
+    stepMinusButton.setBounds  (432, y, 34, h);
+    seqNumStepsLabel.setBounds (466, y, 40, h);
+    stepPlusButton.setBounds   (506, y, 34, h);
+    caption(sequencerLabel, 432, 108);
 
-    // D — swing / gate ----------------------------------------------------
+    // D — swing / gate (556..644) -----------------------------------------
     const int knobSz = 40;
-    const int knobY  = y - 4;
-    seqSwingSlider.setBounds     (552, knobY, knobSz, knobSz);
-    seqGateLengthSlider.setBounds(600, knobY, knobSz, knobSz);
-    caption(seqSwingLabel,      546, 52);
-    caption(seqGateLengthLabel, 594, 52);
+    seqSwingSlider.setBounds     (556, y - 4, knobSz, knobSz);
+    seqGateLengthSlider.setBounds(604, y - 4, knobSz, knobSz);
+    caption(seqSwingLabel,      550, 52);
+    caption(seqGateLengthLabel, 598, 52);
 
-    // E — pattern actions -------------------------------------------------
-    seqRandButton.setBounds (658, y, 96, h);
-    seqClearButton.setBounds(762, y, 80, h);
+    // E — four peer buttons (660..1036): one width, one gap ----------------
+    const int actW = 88;
+    for (int k = 0; k < 4; ++k)
+    {
+        juce::TextButton* b[] = { &seqRandButton, &seqClearButton,
+                                  &seqGlideButton, &seqAccentButton };
+        b[k]->setBounds(660 + k * (actW + gIn), y, actW, h);
+    }
 
-    // F — step flags ------------------------------------------------------
-    seqGlideButton.setBounds (860, y, 76, h);
-    seqAccentButton.setBounds(944, y, 84, h);
-
-    // G — nudge the selected step ----------------------------------------
+    // F — nudge the selected step (1052..1164) -----------------------------
     const int stackH = (h - 2) / 2;
-    seqNotePlusButton.setBounds (1046, y,               52, stackH);
-    seqNoteMinusButton.setBounds(1046, y + stackH + 2,  52, stackH);
-    seqVelPlusButton.setBounds  (1106, y,               52, stackH);
-    seqVelMinusButton.setBounds (1106, y + stackH + 2,  52, stackH);
-    caption(seqNoteLabel, 1046, 52);
-    caption(seqVelLabel,  1106, 52);
+    seqNotePlusButton.setBounds (1052, y,              52, stackH);
+    seqNoteMinusButton.setBounds(1052, y + stackH + 2, 52, stackH);
+    seqVelPlusButton.setBounds  (1112, y,              52, stackH);
+    seqVelMinusButton.setBounds (1112, y + stackH + 2, 52, stackH);
+    caption(seqNoteLabel, 1052, 52);
+    caption(seqVelLabel,  1112, 52);
 
-    // H — pattern bank ----------------------------------------------------
-    seqPatternCombo.setBounds(1176, y + 2, 160, 28);
-    caption(seqPatternLabel, 1176, 160);
+    // G — pattern bank (1180..1336) ---------------------------------------
+    seqPatternCombo.setBounds(1180, y + 2, 156, 28);
+    caption(seqPatternLabel, 1180, 156);
 }
+
 
 
 void TsyganatorEditor::layoutRow4()
