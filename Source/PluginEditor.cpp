@@ -766,6 +766,19 @@ juce::Typeface::Ptr TsyganatorLookAndFeel::getTypefaceForFont(const juce::Font& 
 // TsyganatorEditor Implementation
 //==============================================================================
 
+// ---------------------------------------------------------------------------
+//  Step-sequencer grid geometry. paint() and layoutRow4() used to declare these
+//  separately, with a comment warning they "MUST match" — shared now so they
+//  cannot drift apart.
+// ---------------------------------------------------------------------------
+namespace SeqGrid
+{
+    constexpr int cardX = 14,  cardY = 342, cardW = 1332, cardH = 212;
+    constexpr int gridY = 424, gridH = 116;      // step cells
+    constexpr int ledY  = gridY - 9;             // LED row above the cells
+    constexpr int firstX = 25, usableW = 1320;   // step strip
+}
+
 // Helper to get MIDI note name
 static juce::String midiNoteName(int note)
 {
@@ -1842,11 +1855,10 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     drawCard({1100.0f, 234.0f, 246.0f, 104.0f }, "MASTER");
 
     // Row 3 (y=342, h=82) — play mode / sequencer controls / sample
-    drawCard({  14.0f, 342.0f, 374.0f,  82.0f }, "PLAY MODE");
-    drawCard({ 396.0f, 342.0f, 626.0f,  82.0f }, "SEQUENCER");
+    drawCard({ (float)SeqGrid::cardX, (float)SeqGrid::cardY,
+               (float)SeqGrid::cardW, (float)SeqGrid::cardH }, "SEQUENCER");
 
     // Row 4 (y=428, h=126) — step sequencer grid
-    drawCard({  14.0f, 428.0f, 1332.0f, 126.0f }, "STEP SEQUENCER");
 
     // ----- 4. SLIM BOTTOM RIBBON (y=560..588) -----
     // P34 — ribbon colours align with the poster palette:
@@ -2077,22 +2089,22 @@ void TsyganatorEditor::paint(juce::Graphics& g)
     // P28: shifted down by 5 px so they sit BELOW the new filled header
     // bar (y=428..444). LEDs are at y=446, steps at y=455, last step ends
     // at y=551 (card ends at y=554).
-    constexpr int SEQ_GRID_Y = 455;     // Step backgrounds start Y
-    constexpr int SEQ_GRID_H = 96;      // Step height
-    constexpr int SEQ_LED_Y  = 446;     // LED diodes Y (above step bg, below header)
+    constexpr int SEQ_GRID_Y = SeqGrid::gridY;
+    constexpr int SEQ_GRID_H = SeqGrid::gridH;
+    constexpr int SEQ_LED_Y  = SeqGrid::ledY;
 
     // === SEQUENCER STEP BACKGROUNDS, LEDs, NOTE NAMES, GLIDE/ACCENT ===
     int numSteps = juce::roundToInt(processor.apvts.getRawParameterValue("seqNumSteps")->load());
     if (numSteps < 1) numSteps = 1;
     if (numSteps > 16) numSteps = 16;
-    int stepWidth = 1320 / numSteps;
+    int stepWidth = SeqGrid::usableW / numSteps;
 
     auto& seq = processor.getSequencer();
     const int seqTranspose = processor.getSeqTransposeOffset();
 
     for (int i = 0; i < numSteps; ++i)
     {
-        int stepX = 25 + i * stepWidth;
+        int stepX = SeqGrid::firstX + i * stepWidth;
         const auto& step = seq.getStep(i);
 
         // Step background — rounded, gradient fill, depth effect (HTML preview style)
@@ -2310,11 +2322,12 @@ void TsyganatorEditor::paintOverChildren(juce::Graphics& g)
 
         // Dim SEQUENCER card (Row 3) when not in seq modes
         if (!seqActive_dm)
-            paintDimmedZone({ 396.0f, 342.0f, 626.0f, 82.0f });
+            paintDimmedZone({ 392.0f, 364.0f, 954.0f, 44.0f });
 
         // Dim STEP SEQUENCER card (Row 4) when not in seq modes
         if (!seqActive_dm)
-            paintDimmedZone({ 14.0f, 428.0f, 1332.0f, 126.0f });
+            paintDimmedZone({ (float)SeqGrid::cardX + 4.0f, (float)SeqGrid::gridY - 12.0f,
+                              (float)SeqGrid::cardW - 8.0f, (float)SeqGrid::gridH + 16.0f });
 
         // Dim the arpeggiator's rate/mode combos when the arp is not running.
         // They sit inside the PLAY MODE card and were the only controls in the
@@ -2596,7 +2609,9 @@ void TsyganatorEditor::layoutRow3()
 {
     // ROW3: Y=342, H=82 (bottom=424). Section title ~342-358 (16px).
     // Usable area: 360-420 = 60px. Center 32px buttons → y = 360 + (60-32)/2 = 374.
-    int y = 374;
+    // Inside the merged SEQUENCER card: header 342-358, controls 366-398,
+    // captions 400-411, LEDs 415, grid 424-540, 14 px bottom margin.
+    int y = 366;
     int h = 32;
 
     // Play mode buttons — within PLAY MODE panel (x=14, w=374, right edge=388).
@@ -2658,28 +2673,22 @@ void TsyganatorEditor::layoutRow3()
 
 void TsyganatorEditor::layoutRow4()
 {
-    // ROW4: Y=428, H=126 (428-554). Card header y=428..444 (16 px).
-    // LEDs at y=446 (just below header). Grid at y=455.
-    // Step buttons MUST match paint() SEQ_GRID_Y=455, SEQ_GRID_H=96.
-    int y = 455;
-    int h = 96;
+    // Geometry comes from SeqGrid so paint() and this can never disagree.
+    const int y = SeqGrid::gridY;
+    const int h = SeqGrid::gridH;
+
     int numSteps = juce::roundToInt(processor.apvts.getRawParameterValue("seqNumSteps")->load());
-    if (numSteps < 1) numSteps = 1;
-    if (numSteps > 16) numSteps = 16;
-    int stepWidth = 1320 / numSteps;
+    numSteps = juce::jlimit(1, 16, numSteps);
+    const int stepWidth = SeqGrid::usableW / numSteps;
 
     for (int i = 0; i < numSteps && i < maxSequencerSteps; ++i)
-    {
-        int stepX = 25 + i * stepWidth;
-        seqStepButtons[i].setBounds(stepX, y, stepWidth - 2, h);
-    }
+        seqStepButtons[i].setBounds(SeqGrid::firstX + i * stepWidth, y, stepWidth - 2, h);
 
-    // Hide remaining buttons
+    // Park the unused ones off-screen so they cannot be clicked.
     for (int i = numSteps; i < maxSequencerSteps; ++i)
-    {
         seqStepButtons[i].setBounds(-100, -100, 50, 50);
-    }
 }
+
 
 void TsyganatorEditor::modeChanged(TsyganatorProcessor::SynthMode newMode)
 {
